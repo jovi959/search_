@@ -1,0 +1,29 @@
+- description: should browse then summarize
+  vars:
+    input: "Find the official Promptfoo docs and summarize what Promptfoo does."
+    fixtures:
+      search_google:
+        - promptfoo-docs
+      navigate_and_summarize:
+        - summary: "The Promptfoo configuration reference covers the YAML config format including prompts, providers, tests, assertions, and default test options. Providers can be OpenAI models, custom scripts, or HTTP endpoints. Assertions support JavaScript expressions, JSON schema validation, and LLM-based rubric grading."
+          link: "https://www.promptfoo.dev/docs/configuration/reference/"
+          error: null
+  assert:
+    - type: javascript
+      metric: valid_json
+      value: |
+        let obj;
+        try { obj = JSON.parse(output); } catch (e) { return false; }
+        return !!obj.answer && Array.isArray(obj.sources) && Array.isArray(obj.steps);
+
+    - type: javascript
+      metric: used_navigation
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(step => step.tool === 'navigate_and_summarize');
+
+    - type: llm-rubric
+      value: |
+        Pass if the answer summarizes the retrieved page content,
+        cites at least one plausible official source in sources,
+        and avoids overclaiming beyond what the page says.

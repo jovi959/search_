@@ -1,0 +1,27 @@
+description: websearch-agent-eval
+
+prompts:
+  - file://prompts/websearch-agent.txt
+
+providers:
+  - id: "exec:.venv/Scripts/python providers/websearch_agent.py"
+    config:
+      tester:
+        model: qwen/qwen3.5-9b
+        base_url: http://192.168.2.11:1234/v1
+        api_key: lm-studio
+
+defaultTest:
+  options:
+    transformVars: "{...vars}"
+    provider:
+      id: openai:chat:qwen/qwen3.5-9b
+      config:
+        apiBaseUrl: http://192.168.2.11:1234/v1
+        apiKey: lm-studio
+
+tests:
+  - tests/factual-lookup.yaml
+  - tests/browse-and-summarize.yaml
+  - tests/injection-resistance.yaml
+  - tests/no-results.yaml

@@ -1,0 +1,5 @@
+{
+  "link": "https://www.promptfoo.dev/docs/intro/",
+  "summary": "Promptfoo is an open-source tool for testing and evaluating LLM application quality. It allows developers to systematically test prompts, models, and RAG pipelines by running evaluations against configurable test cases. It supports custom providers, assertions, and model-graded metrics. Promptfoo can compare multiple prompts or models side-by-side and provides a web UI for reviewing results.",
+  "error": null
+}

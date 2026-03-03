@@ -1,0 +1,36 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "search_google",
+      "description": "Search Google for a query and return a list of results with titles and links.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "description": "The search query"
+          }
+        },
+        "required": ["query"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "navigate_and_summarize",
+      "description": "Navigate to a URL and return a summary of the page content.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "link": {
+            "type": "string",
+            "description": "The URL to navigate to and summarize"
+          }
+        },
+        "required": ["link"]
+      }
+    }
+  }
+]

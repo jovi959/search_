@@ -1,0 +1,14 @@
+[
+  {
+    "title": "Promptfoo Documentation - Introduction",
+    "link": "https://www.promptfoo.dev/docs/intro/"
+  },
+  {
+    "title": "Promptfoo Configuration Reference",
+    "link": "https://www.promptfoo.dev/docs/configuration/reference/"
+  },
+  {
+    "title": "Promptfoo Providers - Custom Scripts",
+    "link": "https://www.promptfoo.dev/docs/providers/custom-script/"
+  }
+]

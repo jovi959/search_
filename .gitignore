@@ -1,0 +1,6 @@
+node_modules/
+.promptfoo/
+output/
+__pycache__/
+*.pyc
+.venv/
