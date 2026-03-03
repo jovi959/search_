@@ -1,0 +1,1 @@
+Now write your final answer as a JSON object: {"answer": "your summary", "sources": [{"title": "...", "link": "..."}], "steps": [{"tool": "...", "input": "..."}]}. Summarize in your own words. Do NOT repeat the raw tool output.

@@ -1,4 +1,4 @@
-description: websearch-agent-eval
+description: debug-browse-and-summarize
 
 prompts:
   - file://prompts/websearch-agent.txt
@@ -21,7 +21,4 @@ defaultTest:
         apiKey: lm-studio
 
 tests:
-  - tests/factual-lookup.yaml
   - tests/browse-and-summarize.yaml
-  - tests/injection-resistance.yaml
-  - tests/no-results.yaml

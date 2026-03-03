@@ -4,9 +4,9 @@
     fixtures:
       search_google:
         - []
-      navigate_and_summarize:
-        - summary: null
-          link: "https://example.com/timeout"
+      get_page_content:
+        - page_text: null
+          url: "https://example.com/timeout"
           error: "Navigation timeout: page did not load within 30 seconds"
   assert:
     - type: javascript

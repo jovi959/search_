@@ -3,9 +3,16 @@
     input: "What is Promptfoo and what is it used for?"
     fixtures:
       search_google:
-        - promptfoo-basic
-      navigate_and_summarize:
-        - promptfoo-intro
+        - - title: "Promptfoo: LLM Evaluation and Testing"
+            link: "https://www.promptfoo.dev/"
+          - title: "Promptfoo Documentation - Getting Started"
+            link: "https://www.promptfoo.dev/docs/intro/"
+          - title: "promptfoo/promptfoo: Test your prompts, agents, and RAGs"
+            link: "https://github.com/promptfoo/promptfoo"
+      get_page_content:
+        - page_text: "Promptfoo - LLM Evaluation and Testing. Getting Started. Promptfoo is an open-source command-line tool and library for evaluating LLM output quality. With Promptfoo you can: Test prompts and models systematically using configurable test cases. Compare multiple prompts or providers side-by-side. Run evaluations against RAG pipelines, agents, and chains. Use assertions including JavaScript, JSON schema, and model-graded rubrics. View results in a web dashboard. Install: npm install -g promptfoo. Quick Start: promptfoo init, promptfoo eval, promptfoo view."
+          url: "https://www.promptfoo.dev/docs/intro/"
+          error: null
   assert:
     - type: javascript
       metric: valid_json

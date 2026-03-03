@@ -1,5 +1,0 @@
-{
-  "link": "https://example.com/timeout-page",
-  "summary": null,
-  "error": "Navigation timeout: page did not load within 30 seconds"
-}

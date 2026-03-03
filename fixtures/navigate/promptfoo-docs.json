@@ -1,5 +1,0 @@
-{
-  "link": "https://www.promptfoo.dev/docs/configuration/reference/",
-  "summary": "The Promptfoo configuration reference covers the YAML config format including prompts, providers, tests, assertions, and default test options. Providers can be OpenAI models, custom scripts, or HTTP endpoints. Assertions support JavaScript expressions, JSON schema validation, and LLM-based rubric grading. Test variables are passed to prompts using Mustache-style templates.",
-  "error": null
-}

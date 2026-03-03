@@ -3,10 +3,15 @@
     input: "Find the official Promptfoo docs and summarize what Promptfoo does."
     fixtures:
       search_google:
-        - promptfoo-docs
-      navigate_and_summarize:
-        - summary: "The Promptfoo configuration reference covers the YAML config format including prompts, providers, tests, assertions, and default test options. Providers can be OpenAI models, custom scripts, or HTTP endpoints. Assertions support JavaScript expressions, JSON schema validation, and LLM-based rubric grading."
-          link: "https://www.promptfoo.dev/docs/configuration/reference/"
+        - - title: "Promptfoo Documentation - Introduction"
+            link: "https://www.promptfoo.dev/docs/intro/"
+          - title: "Promptfoo Configuration Reference"
+            link: "https://www.promptfoo.dev/docs/configuration/reference/"
+          - title: "Promptfoo Providers - Custom Scripts"
+            link: "https://www.promptfoo.dev/docs/providers/custom-script/"
+      get_page_content:
+        - page_text: "Promptfoo Configuration Reference. promptfooconfig.yaml. description: string. prompts: list of prompt strings or file paths. providers: list of provider configs (openai:chat:gpt-4, exec:python script.py, etc). tests: list of test cases with vars and assertions. defaultTest: shared options for all tests including grading provider. Assertions: type: javascript, type: llm-rubric, type: contains, type: json-schema. Provider config: id, config.apiBaseUrl, config.apiKey. Test vars use Mustache templates: {{variable}}."
+          url: "https://www.promptfoo.dev/docs/configuration/reference/"
           error: null
   assert:
     - type: javascript
@@ -17,10 +22,10 @@
         return !!obj.answer && Array.isArray(obj.sources) && Array.isArray(obj.steps);
 
     - type: javascript
-      metric: used_navigation
+      metric: used_get_page
       value: |
         const obj = JSON.parse(output);
-        return obj.steps.some(step => step.tool === 'navigate_and_summarize');
+        return obj.steps.some(step => step.tool === 'get_page_content');
 
     - type: llm-rubric
       value: |

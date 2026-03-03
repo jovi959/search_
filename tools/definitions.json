@@ -3,13 +3,13 @@
     "type": "function",
     "function": {
       "name": "search_google",
-      "description": "Search Google for a query and return a list of results with titles and links.",
+      "description": "Search Google and return a list of results, each with a title and link. Use this as your first step to find relevant pages. Returns an array of {title, link} objects.",
       "parameters": {
         "type": "object",
         "properties": {
           "query": {
             "type": "string",
-            "description": "The search query"
+            "description": "Short search keywords, e.g. \"Promptfoo LLM testing\""
           }
         },
         "required": ["query"]
@@ -19,17 +19,17 @@
   {
     "type": "function",
     "function": {
-      "name": "navigate_and_summarize",
-      "description": "Navigate to a URL and return a summary of the page content.",
+      "name": "get_page_content",
+      "description": "Fetch a URL and return its raw text. Use this after search_google to read a page. Returns {page_text, url, error}. The page_text is raw — you must summarize it yourself.",
       "parameters": {
         "type": "object",
         "properties": {
-          "link": {
+          "url": {
             "type": "string",
-            "description": "The URL to navigate to and summarize"
+            "description": "A URL from search_google results. Must start with http:// or https://."
           }
         },
-        "required": ["link"]
+        "required": ["url"]
       }
     }
   }
