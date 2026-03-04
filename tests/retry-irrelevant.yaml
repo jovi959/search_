@@ -1,0 +1,52 @@
+- description: should retry search when results are irrelevant
+  vars:
+    input: "What programming language is Rust and what is it used for?"
+    fixtures:
+      search_google:
+        - - title: "How to Remove Rust from Metal - Home Tips"
+            link: "https://www.homerepair.com/remove-rust"
+          - title: "Rust Prevention Guide for Cars"
+            link: "https://www.autocare.com/rust-prevention"
+          - title: "Best Rust Remover Products 2026"
+            link: "https://www.cleaningtips.com/rust-removers"
+        - - title: "Rust Programming Language - Official Site"
+            link: "https://www.rust-lang.org/"
+          - title: "Rust (programming language) - Wikipedia"
+            link: "https://en.wikipedia.org/wiki/Rust_(programming_language)"
+          - title: "Learn Rust - The Rust Book"
+            link: "https://doc.rust-lang.org/book/"
+      get_page_content:
+        - page_text: "Rust is a multi-paradigm, general-purpose programming language designed for performance and safety. It is syntactically similar to C++ but provides memory safety without garbage collection. Rust was originally designed by Graydon Hoare at Mozilla Research. It is used for systems programming, web assembly, command-line tools, network services, and embedded systems. Companies using Rust include Mozilla, Dropbox, Cloudflare, Discord, and Amazon (AWS). Rust has been voted the most loved programming language in Stack Overflow's developer survey for several consecutive years."
+          url: "https://www.rust-lang.org/"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 50;
+
+    - type: javascript
+      metric: searched_twice
+      value: |
+        const obj = JSON.parse(output);
+        const searches = obj.steps.filter(s => s.tool === 'search_google');
+        return searches.length >= 2;
+
+    - type: javascript
+      metric: used_get_page
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'get_page_content');
+
+    - type: javascript
+      metric: answer_about_programming
+      value: |
+        const obj = JSON.parse(output);
+        return /programming|language|memory|safety|systems/i.test(obj.answer);
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it explains Rust as a programming language (not metal corrosion),
+        mentions its use cases, and is grounded in the sources visited.

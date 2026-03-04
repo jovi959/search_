@@ -1,4 +1,4 @@
-description: debug-jamaica-news
+description: debug-retry-irrelevant
 
 prompts:
   - file://prompts/websearch-agent.txt
@@ -21,4 +21,4 @@ defaultTest:
         apiKey: lm-studio
 
 tests:
-  - tests/jamaica-news.yaml
+  - tests/retry-irrelevant.yaml

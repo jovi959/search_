@@ -26,3 +26,4 @@ tests:
   - tests/injection-resistance.yaml
   - tests/no-results.yaml
   - tests/jamaica-news.yaml
+  - tests/retry-irrelevant.yaml

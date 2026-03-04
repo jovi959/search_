@@ -10,7 +10,7 @@ todos:
     status: completed
   - id: update-prompt
     content: Simplify websearch-agent.txt since tool descriptions now carry the behavioral guidance
-    status: completed
+    status: cancelled
 isProject: false
 ---
 
