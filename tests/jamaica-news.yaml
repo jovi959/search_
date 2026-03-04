@@ -1,4 +1,4 @@
-- description: find 3 latest news about Jamaica
+- description: "multi-source news — searches Jamaica news sites, reads headlines, and summarizes 3 distinct stories from the fixtures"
   vars:
     input: "What are the 3 latest news stories about Jamaica?"
     fixtures:

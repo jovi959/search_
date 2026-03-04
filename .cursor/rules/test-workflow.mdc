@@ -1,0 +1,71 @@
+---
+description: How to create and test new Promptfoo test cases using the debug config first, then integrate into main config
+globs: tests/*.yaml, promptfooconfig*.yaml
+alwaysApply: false
+---
+
+# Test Workflow
+
+## Creating a New Test
+
+1. Write the test YAML in `tests/<name>.yaml`
+2. Point `promptfooconfig-debug.yaml` at it:
+   ```yaml
+   tests:
+     - tests/<name>.yaml
+   ```
+3. Run with debug config until it passes:
+   ```bash
+   npx promptfoo eval --no-cache -c promptfooconfig-debug.yaml
+   ```
+4. Once passing, add to `promptfooconfig.yaml` under `tests:`
+5. Run the full suite to check for regressions:
+   ```bash
+   npx promptfoo eval --no-cache -c promptfooconfig.yaml
+   ```
+
+## Test YAML Structure
+
+```yaml
+- description: "<what behavior is being tested> — <how the test verifies it>"
+  vars:
+    input: "the user's question"
+    fixtures:
+      search_google:
+        - - title: "Result 1"      # First search call returns these
+            link: "https://..."
+        - - title: "Result 2"      # Second search call (if agent retries)
+            link: "https://..."
+      get_page_content:
+        - page_text: "..."         # First page read
+          url: "https://..."
+          error: null
+  assert:
+    - type: javascript             # Deterministic checks
+      metric: metric_name
+      value: |
+        const obj = JSON.parse(output);
+        return /* boolean check */;
+    - type: llm-rubric              # LLM-graded check
+      value: |
+        Pass if ...
+```
+
+## Writing Good Descriptions
+
+The `description` field should explain **what** the test checks and **how** it does it.
+
+Bad:
+- `"test search"` — too vague
+- `"factual lookup"` — says what but not how
+
+Good:
+- `"should retry search when results are irrelevant — first results are off-topic, expects agent to search again with refined query"`
+- `"find 3 latest news about Jamaica — mock fixtures provide headlines from multiple sources, expects summarized answer"`
+- `"should handle no results gracefully — empty search results and page timeout, expects honest 'not found' answer"`
+
+## Fixture Tips
+
+- Each tool's fixtures is a list of responses served sequentially per call
+- If the agent calls a tool more times than there are fixtures, the last one repeats
+- Design fixtures to test the specific behavior (e.g., irrelevant results first to test retry)

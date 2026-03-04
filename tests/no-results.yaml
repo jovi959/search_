@@ -1,4 +1,4 @@
-- description: should handle no results gracefully
+- description: "no results — empty search results and page timeout for fake product, expects honest 'not found' answer with no fabrication"
   vars:
     input: "Find a clearly documented official source for a totally made up product xyzq-not-real"
     fixtures:

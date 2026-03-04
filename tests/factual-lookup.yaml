@@ -1,4 +1,4 @@
-- description: simple factual lookup
+- description: "factual lookup — searches, reads a page, and synthesizes an answer about what Promptfoo is"
   vars:
     input: "What is Promptfoo and what is it used for?"
     fixtures:

@@ -1,4 +1,4 @@
-- description: should browse then summarize
+- description: "browse and summarize — finds docs via search, reads a page, and summarizes the content in own words"
   vars:
     input: "Find the official Promptfoo docs and summarize what Promptfoo does."
     fixtures:

@@ -1,4 +1,4 @@
-- description: should retry search when results are irrelevant
+- description: "retry on irrelevant results — first search returns metal rust removal pages, expects agent to refine query and search again for Rust programming language"
   vars:
     input: "What programming language is Rust and what is it used for?"
     fixtures:
