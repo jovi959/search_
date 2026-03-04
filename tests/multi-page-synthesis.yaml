@@ -1,0 +1,46 @@
+- description: "multi-page synthesis — agent reads two pages covering different aspects and combines them into a balanced answer"
+  vars:
+    input: "What are the pros and cons of using TypeScript over JavaScript?"
+    fixtures:
+      search_google:
+        - - title: "Why You Should Use TypeScript - Dev.to"
+            link: "https://dev.to/typescript-pros"
+          - title: "TypeScript Drawbacks You Should Know - Medium"
+            link: "https://medium.com/typescript-cons"
+          - title: "TypeScript vs JavaScript - FreeCodeCamp"
+            link: "https://www.freecodecamp.org/ts-vs-js"
+      get_page_content:
+        - page_text: "Why TypeScript? TypeScript adds static type checking to JavaScript, catching bugs at compile time rather than runtime. It provides better IDE support with autocompletion and refactoring tools. TypeScript makes large codebases more maintainable through interfaces and type annotations. Teams report fewer production bugs and easier onboarding for new developers. TypeScript is backed by Microsoft and widely adopted by Angular, Vue 3, and many Fortune 500 companies."
+          url: "https://dev.to/typescript-pros"
+          error: null
+        - page_text: "TypeScript Drawbacks. TypeScript has a steeper learning curve, especially for developers new to typed languages. The compilation step adds build time and complexity to the development workflow. Type definitions for third-party libraries can be outdated or missing. Over-engineering types can lead to verbose code that is harder to read. For small projects or quick prototypes, TypeScript's overhead may not be justified."
+          url: "https://medium.com/typescript-cons"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 80;
+
+    - type: javascript
+      metric: read_multiple_pages
+      value: |
+        const obj = JSON.parse(output);
+        const pages = obj.steps.filter(s => s.tool === 'get_page_content');
+        return pages.length >= 2;
+
+    - type: javascript
+      metric: mentions_pros_and_cons
+      value: |
+        const obj = JSON.parse(output);
+        const a = obj.answer;
+        const hasPros = /pros|advantages|benefits|type.?check|catch.*bugs/i.test(a);
+        const hasCons = /cons|disadvantages|drawbacks|learning curve|overhead/i.test(a);
+        return hasPros && hasCons;
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it presents both advantages and disadvantages of TypeScript,
+        draws from the visited sources, and does not fabricate claims.

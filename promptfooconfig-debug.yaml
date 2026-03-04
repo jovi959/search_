@@ -7,18 +7,18 @@ providers:
   - id: "exec:.venv/Scripts/python providers/websearch_agent.py"
     config:
       tester:
-        model: locooperator-4b
-        base_url: http://192.168.2.11:1234/v1
-        api_key: lm-studio
+        model: "{{env.AGENT_MODEL}}"
+        base_url: "{{env.LM_STUDIO_BASE_URL}}"
+        api_key: "{{env.LM_STUDIO_API_KEY}}"
 
 defaultTest:
   options:
     transformVars: "{...vars}"
     provider:
-      id: openai:chat:qwen/qwen3.5-9b
+      id: "openai:chat:{{env.GRADER_MODEL}}"
       config:
-        apiBaseUrl: http://192.168.2.11:1234/v1
-        apiKey: lm-studio
+        apiBaseUrl: "{{env.LM_STUDIO_BASE_URL}}"
+        apiKey: "{{env.LM_STUDIO_API_KEY}}"
 
 tests:
-  - tests/retry-irrelevant.yaml
+  - tests/factual-lookup.yaml

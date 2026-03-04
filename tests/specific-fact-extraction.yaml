@@ -1,0 +1,47 @@
+- description: "specific fact extraction — agent extracts precise dates and names rather than giving a broad summary"
+  vars:
+    input: "When was Python first released and who created it?"
+    fixtures:
+      search_google:
+        - - title: "Python (programming language) - Wikipedia"
+            link: "https://en.wikipedia.org/wiki/Python_(programming_language)"
+          - title: "History of Python - Python Wiki"
+            link: "https://wiki.python.org/moin/History"
+          - title: "Python Release History - python.org"
+            link: "https://www.python.org/downloads/"
+      get_page_content:
+        - page_text: "Python is a high-level, general-purpose programming language. Its design philosophy emphasizes code readability. Python was conceived in the late 1980s by Guido van Rossum at Centrum Wiskunde & Informatica (CWI) in the Netherlands. The first version, Python 0.9.0, was released on February 20, 1991. Python 2.0 was released on October 16, 2000, and Python 3.0 on December 3, 2008. Guido van Rossum served as Python's 'Benevolent Dictator For Life' (BDFL) until July 2018."
+          url: "https://en.wikipedia.org/wiki/Python_(programming_language)"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 20;
+
+    - type: javascript
+      metric: mentions_year
+      value: |
+        const obj = JSON.parse(output);
+        return /1991/.test(obj.answer);
+
+    - type: javascript
+      metric: mentions_creator
+      value: |
+        const obj = JSON.parse(output);
+        return /Guido van Rossum/i.test(obj.answer);
+
+    - type: javascript
+      metric: used_tools
+      value: |
+        const obj = JSON.parse(output);
+        const searched = obj.steps.some(s => s.tool === 'search_google');
+        const read = obj.steps.some(s => s.tool === 'get_page_content');
+        return searched && read;
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it states Python was first released in 1991 and created by Guido van Rossum.
+        The answer should be concise and grounded in the source, not a broad essay.

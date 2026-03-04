@@ -1,0 +1,35 @@
+- description: "single search result — only one result returned, agent should work correctly without unnecessary retries"
+  vars:
+    input: "What is the Gleam programming language?"
+    fixtures:
+      search_google:
+        - - title: "Gleam - Official Website"
+            link: "https://gleam.run/"
+      get_page_content:
+        - page_text: "Gleam is a friendly language for building type-safe, scalable systems. It compiles to Erlang and JavaScript, running on the BEAM virtual machine and in browsers. Gleam features a strong static type system with type inference, immutable data, and no null values. It is designed for building concurrent, fault-tolerant applications. Gleam's syntax is influenced by Rust and Elm, and it interoperates seamlessly with Erlang and Elixir libraries."
+          url: "https://gleam.run/"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 30;
+
+    - type: javascript
+      metric: used_search
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'search_google');
+
+    - type: javascript
+      metric: used_get_page
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'get_page_content');
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it describes Gleam as a programming language, mentions Erlang or
+        BEAM, and is grounded in the source without fabrication.

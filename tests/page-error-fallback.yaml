@@ -1,0 +1,43 @@
+- description: "page error fallback — first page load fails with timeout, agent should try another URL from search results"
+  vars:
+    input: "What is Kubernetes and what is it used for?"
+    fixtures:
+      search_google:
+        - - title: "Kubernetes Documentation - Official Site"
+            link: "https://kubernetes.io/docs/"
+          - title: "What is Kubernetes? - Red Hat"
+            link: "https://www.redhat.com/en/topics/containers/what-is-kubernetes"
+          - title: "Kubernetes - Wikipedia"
+            link: "https://en.wikipedia.org/wiki/Kubernetes"
+      get_page_content:
+        - page_text: null
+          url: "https://kubernetes.io/docs/"
+          error: "Connection timed out after 30000ms"
+        - page_text: "Kubernetes (K8s) is an open-source container orchestration platform originally developed by Google. It automates the deployment, scaling, and management of containerized applications. Kubernetes groups containers into logical units called pods for easy management and discovery. It is widely used for microservices architectures, CI/CD pipelines, and cloud-native applications. Major cloud providers offer managed Kubernetes services: Amazon EKS, Google GKE, and Azure AKS."
+          url: "https://www.redhat.com/en/topics/containers/what-is-kubernetes"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 50;
+
+    - type: javascript
+      metric: read_multiple_pages
+      value: |
+        const obj = JSON.parse(output);
+        const pages = obj.steps.filter(s => s.tool === 'get_page_content');
+        return pages.length >= 2;
+
+    - type: javascript
+      metric: answer_about_kubernetes
+      value: |
+        const obj = JSON.parse(output);
+        return /container|orchestration|cluster|deploy/i.test(obj.answer);
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it correctly explains what Kubernetes is and its use cases,
+        is grounded in the sources visited, and does not fabricate information.

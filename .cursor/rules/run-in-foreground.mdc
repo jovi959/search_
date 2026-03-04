@@ -1,0 +1,12 @@
+---
+description: Always run shell commands in the foreground terminal, never in the background
+alwaysApply: true
+---
+
+# Run Commands in Foreground
+
+When executing shell commands (e.g. `npm test`, `node`, `npx`), **always** run them in the visible foreground terminal — never use `block_until_ms: 0` or background execution.
+
+- Set `block_until_ms` high enough for the command to finish (e.g. 120000 for tests, 300000 for full suites).
+- If a command might take longer than 30 seconds, increase `block_until_ms` accordingly rather than backgrounding it.
+- The user wants to see command output live in their terminal, not in a background file.
