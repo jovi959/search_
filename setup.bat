@@ -80,7 +80,7 @@ if exist .venv\Scripts\python.exe (
 )
 
 if "!VENV_DONE!"=="1" (
-    .venv\Scripts\python -c "import openai" >nul 2>&1
+    .venv\Scripts\python -c "import openai; import seleniumbase" >nul 2>&1
     if !errorlevel! equ 0 (
         set "PIP_DONE=1"
     )
@@ -90,9 +90,9 @@ if "!NODE_DONE!"=="1" if "!VENV_DONE!"=="1" if "!PIP_DONE!"=="1" (
     echo ----------------------------------------
     echo  Everything is already installed:
     echo.
-    echo   [OK] node_modules  (promptfoo found)
-    echo   [OK] .venv         (exists)
-    echo   [OK] openai        (importable)
+    echo   [OK] node_modules    (promptfoo found)
+    echo   [OK] .venv           (exists)
+    echo   [OK] Python packages (openai + seleniumbase)
     echo ----------------------------------------
     echo.
     choice /C YN /M "Reinstall anyway? (Y/N)"
@@ -100,8 +100,9 @@ if "!NODE_DONE!"=="1" if "!VENV_DONE!"=="1" if "!PIP_DONE!"=="1" (
         echo.
         echo Skipping install. You're good to go!
         echo.
-        echo   npm run eval        Run all tests
-        echo   npm run view        Open results in browser
+        echo   python main.py "your question"   Run the agent
+        echo   npm run eval                     Run all tests
+        echo   npm run view                     Open results in browser
         echo.
         pause
         exit /b 0
@@ -122,9 +123,9 @@ if "!NODE_DONE!"=="1" if "!VENV_DONE!"=="1" if "!PIP_DONE!"=="1" (
         echo   [--] .venv         not created
     )
     if "!PIP_DONE!"=="1" (
-        echo   [OK] openai        already installed
+        echo   [OK] Python pkgs   already installed
     ) else (
-        echo   [--] openai        not installed
+        echo   [--] Python pkgs   not installed
     )
     echo ----------------------------------------
     echo.
@@ -224,12 +225,12 @@ if %errorlevel% neq 0 (
     exit /b 1
 )
 
-pip install -r requirements.txt 2>&1
+.venv\Scripts\python -m pip install -r requirements.txt 2>&1
 if %errorlevel% neq 0 (
     echo.
     echo   [X] FAILED - pip install
     echo       Check the error above. Common fixes:
-    echo         - Upgrade pip: python -m pip install --upgrade pip
+    echo         - Upgrade pip: .venv\Scripts\python -m pip install --upgrade pip
     echo         - Check your internet connection
     pause
     exit /b 1
@@ -257,15 +258,24 @@ if %errorlevel% neq 0 (
     echo   [X] openai package not working
 )
 
+.venv\Scripts\python -c "import seleniumbase; print('  [OK] seleniumbase', seleniumbase.__version__)" 2>&1
+if %errorlevel% neq 0 (
+    echo   [X] seleniumbase package not working
+)
+
 echo.
 echo ========================================
 echo  Setup complete!
 echo.
 echo  Quick start:
-echo    npm run eval        Run all tests
-echo    npm run view        Open results in browser
+echo    python main.py "your question"   Run the agent
+echo    npm run eval                     Run all tests
+echo    npm run view                     Open results in browser
 echo.
 echo  Debug a single test:
 echo    npx promptfoo eval --no-cache -c promptfooconfig-debug.yaml
+echo.
+echo  Configuration:
+echo    Edit .env to change model, API URL, or HEADLESS mode
 echo ========================================
 pause
