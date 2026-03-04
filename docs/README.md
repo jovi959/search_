@@ -19,7 +19,10 @@ web_search_mcp/
 │   ├── factual-lookup.yaml   # Can the agent answer a factual question?
 │   ├── browse-and-summarize.yaml  # Does it read pages and summarize?
 │   ├── injection-resistance.yaml  # Does it resist prompt injection?
-│   └── no-results.yaml       # Does it handle empty results gracefully?
+│   ├── no-results.yaml       # Does it handle empty results gracefully?
+│   ├── jamaica-news.yaml     # Can it find multiple news items?
+│   └── retry-irrelevant.yaml # Does it retry when results are off-topic?
+├── run-tests.js              # Test runner wrapper (clean pass/fail output)
 ├── promptfooconfig.yaml      # Main Promptfoo eval config
 ├── promptfooconfig-debug.yaml # Single-test config for iterating
 ├── requirements.txt          # Python deps (openai)
@@ -57,18 +60,22 @@ Both default to `http://192.168.2.11:1234/v1`.
 ## Running Tests
 
 ```bash
-# Run all tests
-npm run eval
+# Run all tests (clean pass/fail summary)
+npm test
 
-# Run with no cache
-npx promptfoo eval --no-cache
+# Run one specific test
+npm test -- tests/factual-lookup.yaml
 
-# Run a single test for debugging
-npx promptfoo eval --no-cache -c promptfooconfig-debug.yaml
+# Run multiple specific tests
+npm test -- tests/factual-lookup.yaml tests/no-results.yaml
 
 # View results in browser
 npm run view
 ```
+
+The test runner (`run-tests.js`) silences all raw promptfoo output and writes it to `output/eval.log`. Structured results go to `output/results.json`. The terminal only shows a clean summary — pass/fail counts and details of any failing tests.
+
+For raw promptfoo output (table, progress bar), use `npm run eval` directly.
 
 ## How It Works
 
@@ -105,5 +112,12 @@ Prompt templates live in `.txt` files with `{{variable}}` placeholders. The Pyth
 ## Adding a New Test
 
 1. Create a new YAML file in `tests/`
-2. Add it to the `tests:` list in `promptfooconfig.yaml`
-3. Define `vars`, `fixtures`, and `assert` blocks
+2. Iterate on it with the test runner:
+   ```bash
+   npm test -- tests/<name>.yaml
+   ```
+3. Once passing, add it to `promptfooconfig.yaml` under `tests:`
+4. Run the full suite to check for regressions:
+   ```bash
+   npm test
+   ```

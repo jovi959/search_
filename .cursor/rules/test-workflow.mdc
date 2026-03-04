@@ -1,27 +1,34 @@
 ---
-description: How to create and test new Promptfoo test cases using the debug config first, then integrate into main config
-globs: tests/*.yaml, promptfooconfig*.yaml
+description: How to create and test new Promptfoo test cases using the test runner, then integrate into main config
+globs: tests/*.yaml, promptfooconfig*.yaml, run-tests.js
 alwaysApply: false
 ---
 
 # Test Workflow
 
+## Running Tests
+
+```bash
+npm test                                          # run full suite
+npm test -- tests/<name>.yaml                     # run one specific test
+npm test -- tests/a.yaml tests/b.yaml             # run multiple specific tests
+```
+
+The test runner (`run-tests.js`) silences raw promptfoo output, logs it to `output/eval.log`, and prints only a pass/fail summary. On failure it lists each failing test with its failed assertions.
+
+When specific files are passed, the runner rewrites the `tests:` section of `promptfooconfig-debug.yaml` automatically — no need to edit it by hand.
+
 ## Creating a New Test
 
 1. Write the test YAML in `tests/<name>.yaml`
-2. Point `promptfooconfig-debug.yaml` at it:
-   ```yaml
-   tests:
-     - tests/<name>.yaml
-   ```
-3. Run with debug config until it passes:
+2. Run it in isolation until it passes:
    ```bash
-   npx promptfoo eval --no-cache -c promptfooconfig-debug.yaml
+   npm test -- tests/<name>.yaml
    ```
-4. Once passing, add to `promptfooconfig.yaml` under `tests:`
-5. Run the full suite to check for regressions:
+3. Once passing, add to `promptfooconfig.yaml` under `tests:`
+4. Run the full suite to check for regressions:
    ```bash
-   npx promptfoo eval --no-cache -c promptfooconfig.yaml
+   npm test
    ```
 
 ## Test YAML Structure

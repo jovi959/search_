@@ -4,6 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
+    "test": "node run-tests.js",
     "eval": "promptfoo eval",
     "view": "promptfoo view"
   },
