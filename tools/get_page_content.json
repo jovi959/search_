@@ -1,0 +1,17 @@
+{
+  "type": "function",
+  "function": {
+    "name": "get_page_content",
+    "description": "`get_page_content`: Navigate to a URL and return the raw text content of the page.\n\n### When to Use This Tool\n\nUse `get_page_content` when you need to:\n- Read the actual content of a page found via search_google\n- Get detailed information that titles and links alone cannot provide\n- Verify claims by reading the source material\n\n### When NOT to Use\n\nSkip `get_page_content` when:\n1. You don't have a URL yet (use `search_google` first)\n2. The search result titles already answer the question sufficiently\n3. You've already read this URL in a previous step\n\n### Examples\n\n<example>\n  URL: \"https://www.promptfoo.dev/docs/intro/\"\n<reasoning>\n  Good: A real URL from search results. Official documentation page likely to contain detailed, authoritative information.\n</reasoning>\n</example>\n\n<example>\n  URL: \"https://www.example.com/promptfoo-info\"\n<reasoning>\n  BAD: A guessed or made-up URL. Only use URLs that came from search_google results.\n</reasoning>\n</example>\n\n<example>\n  Using get_page_content on all 3 search results without checking titles first.\n<reasoning>\n  BAD: Read titles first to pick the most relevant 1-2 results. Don't blindly fetch every page — it wastes steps.\n</reasoning>\n</example>\n\n### Usage\n- Returns raw page text in the `page_text` field. You MUST read and summarize this text yourself — do not pass it through as your answer.\n- Check the `error` field — if not null, the page failed to load. Acknowledge the failure and try a different URL.\n- The `url` field confirms which page was retrieved.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "url": {
+          "type": "string",
+          "description": "A full URL obtained from search_google results. Must start with http:// or https://. Do not guess or fabricate URLs — only use links returned by search_google."
+        }
+      },
+      "required": ["url"]
+    }
+  }
+}

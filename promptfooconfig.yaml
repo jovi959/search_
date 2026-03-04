@@ -25,3 +25,4 @@ tests:
   - tests/browse-and-summarize.yaml
   - tests/injection-resistance.yaml
   - tests/no-results.yaml
+  - tests/jamaica-news.yaml

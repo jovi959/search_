@@ -1,0 +1,58 @@
+- description: find 3 latest news about Jamaica
+  vars:
+    input: "What are the 3 latest news stories about Jamaica?"
+    fixtures:
+      search_google:
+        - - title: "Jamaica Observer: Breaking News & Headlines"
+            link: "https://www.jamaicaobserver.com/"
+          - title: "Jamaica Gleaner - Latest Jamaica News Today"
+            link: "https://jamaica-gleaner.com/"
+          - title: "Loop Jamaica - Caribbean News"
+            link: "https://loopjamaica.com/"
+          - title: "RJR News - Jamaica Radio"
+            link: "https://radiojamaicanewsonline.com/"
+      get_page_content:
+        - page_text: "Jamaica Observer Headlines. March 3, 2026. 1) Jamaica's Tourism Sector Hits Record Numbers — The tourism ministry announced that Jamaica welcomed over 5 million visitors in 2025, marking a 12% increase over the previous year. Hotels and attractions across the island reported near-full occupancy during the winter season. 2) New Highway Extension Approved for Spanish Town — Cabinet has approved funding for a major highway extension connecting Spanish Town to May Pen, expected to cut commute times by 40 minutes. Construction begins in Q3 2026. 3) Jamaican Sprinter Breaks National Record — At the Caribbean Athletics Championships, 22-year-old Kemar Thompson ran the 100m in 9.79 seconds, setting a new Jamaican national record and qualifying for the World Championships."
+          url: "https://www.jamaicaobserver.com/"
+          error: null
+        - page_text: "Jamaica Gleaner Top Stories. PM addresses Parliament on economic growth. Jamaica's GDP grew 2.8% in 2025. New education reform bill introduced. Agriculture sector sees boost from export deals with UK."
+          url: "https://jamaica-gleaner.com/"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 50;
+
+    - type: javascript
+      metric: used_search
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'search_google');
+
+    - type: javascript
+      metric: used_get_page
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'get_page_content');
+
+    - type: javascript
+      metric: mentions_jamaica
+      value: |
+        const obj = JSON.parse(output);
+        return /jamaica/i.test(obj.answer);
+
+    - type: javascript
+      metric: has_multiple_news
+      value: |
+        const obj = JSON.parse(output);
+        const nums = obj.answer.match(/\d[\.\)]/g) || [];
+        const keywords = (obj.answer.match(/tourism|highway|sprinter|record|GDP|education/gi) || []);
+        return nums.length >= 2 || keywords.length >= 2;
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it lists at least 2-3 distinct recent news stories about Jamaica,
+        the content is grounded in the sources visited, and nothing is fabricated.

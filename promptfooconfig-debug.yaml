@@ -1,4 +1,4 @@
-description: debug-browse-and-summarize
+description: debug-jamaica-news
 
 prompts:
   - file://prompts/websearch-agent.txt
@@ -21,4 +21,4 @@ defaultTest:
         apiKey: lm-studio
 
 tests:
-  - tests/browse-and-summarize.yaml
+  - tests/jamaica-news.yaml

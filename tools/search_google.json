@@ -1,0 +1,17 @@
+{
+  "type": "function",
+  "function": {
+    "name": "search_google",
+    "description": "`search_google`: Search Google for a query and return a ranked list of results.\n\n### When to Use This Tool\n\nUse `search_google` when you need to:\n- Start researching a topic you don't have URLs for\n- Find official sources, documentation, or authoritative pages\n- Discover what exists on the web about a subject\n\n### When NOT to Use\n\nSkip `search_google` when:\n1. You already have a URL to read (use `get_page_content` instead)\n2. The user's question can be answered from page content you already retrieved\n3. You just got empty results — refine your query instead of repeating the same search\n\n### Examples\n\n<example>\n  Query: \"Promptfoo LLM evaluation testing tool\"\n<reasoning>\n  Good: Concise keywords targeting the subject. Likely to surface official site and docs.\n</reasoning>\n</example>\n\n<example>\n  Query: \"What is Promptfoo and what is it used for and how do I install it?\"\n<reasoning>\n  BAD: Full sentence pasted as a search query. Search engines work best with keywords, not natural language questions. Use \"Promptfoo installation guide\" instead.\n</reasoning>\n</example>\n\n<example>\n  Query: \"testing\"\n<reasoning>\n  BAD: Too broad. Will return millions of unrelated results. Be specific: \"Promptfoo prompt testing framework\" not just \"testing\".\n</reasoning>\n</example>\n\n### Usage\n- Always use this as your first step before get_page_content.\n- Review the returned titles and links to pick the 1-3 most relevant results.\n- If results are weak or irrelevant, refine your query with more specific keywords.\n- Do NOT pass search results directly as your answer — they are inputs, not outputs.",
+    "parameters": {
+      "type": "object",
+      "properties": {
+        "query": {
+          "type": "string",
+          "description": "Concise search keywords (not full sentences). Target the specific subject, product, or topic. Example: \"Promptfoo docs getting started\" not \"What is Promptfoo and how do I get started with it?\""
+        }
+      },
+      "required": ["query"]
+    }
+  }
+}

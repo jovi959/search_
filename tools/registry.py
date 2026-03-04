@@ -2,7 +2,10 @@ import json
 from pathlib import Path
 
 TOOLS_DIR = Path(__file__).parent
-ALL_TOOLS = json.loads((TOOLS_DIR / "definitions.json").read_text(encoding="utf-8"))
+ALL_TOOLS = [
+    json.loads(f.read_text(encoding="utf-8"))
+    for f in sorted(TOOLS_DIR.glob("*.json"))
+]
 TOOL_DEFS_BY_NAME = {t["function"]["name"]: t for t in ALL_TOOLS}
 
 
