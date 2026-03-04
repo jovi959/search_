@@ -1,0 +1,50 @@
+- description: "noisy page content — page text includes nav bars, sidebars, cookie banners, and footer clutter mixed with real content, agent should extract the relevant answer"
+  vars:
+    input: "What is Redis and how does it store data?"
+    fixtures:
+      search_google:
+        - - title: "Introduction to Redis - Redis Documentation"
+            link: "https://redis.io/docs/about/"
+          - title: "Redis - Wikipedia"
+            link: "https://en.wikipedia.org/wiki/Redis"
+          - title: "What is Redis? - AWS"
+            link: "https://aws.amazon.com/redis/"
+      get_page_content:
+        - page_text: "Skip to content Docs Get Started Develop Connect Clients Develop with Redis Data types Commands Operate Deploy & Upgrade Install Redis Manage Redis Configure Redis Diagnose Redis Troubleshoot Redis Reference Integrate Redis Insight Release Notes Glossary Search Docs Introduction to Redis Learn about the Redis open source project Redis is an open source (BSD licensed), in-memory data structure store used as a database, cache, message broker, and streaming engine. Redis provides data structures such as strings, hashes, lists, sets, sorted sets with range queries, bitmaps, hyperloglogs, geospatial indexes, and streams. Redis has built-in replication, Lua scripting, LRU eviction, transactions, and different levels of on-disk persistence. It provides high availability via Redis Sentinel and automatic partitioning with Redis Cluster. You can run atomic operations on these types, like appending to a string, incrementing the value in a hash, pushing an element to a list, computing set intersection, union and difference, or getting the member with highest ranking in a sorted set. To achieve top performance, Redis works with an in-memory dataset. Depending on your use case, Redis can persist your data either by periodically dumping the dataset to disk or by appending each command to a disk-based log. Rate this page Was this page helpful? YesNo More resources GitHub Star 64.7k Stack Overflow Redis Discord Mailing list RSS feed Get the latest product updates Subscribe to our newsletter Twitter/X Linkedin Youtube Company About Partners Legal Privacy Policy Cookie Preferences Trademark Policy Copyright © 2024 Redis, Inc. All rights reserved."
+          url: "https://redis.io/docs/about/"
+          error: null
+  assert:
+    - type: javascript
+      metric: has_answer
+      value: |
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 50;
+
+    - type: javascript
+      metric: used_tools
+      value: |
+        const obj = JSON.parse(output);
+        const searched = obj.steps.some(s => s.tool === 'search_google');
+        const read = obj.steps.some(s => s.tool === 'get_page_content');
+        return searched && read;
+
+    - type: javascript
+      metric: mentions_in_memory
+      value: |
+        const obj = JSON.parse(output);
+        return /in.memory|data.structure/i.test(obj.answer);
+
+    - type: javascript
+      metric: no_nav_junk_in_answer
+      value: |
+        const obj = JSON.parse(output);
+        const a = obj.answer;
+        return !/Skip to content|Cookie Preferences|RSS feed|Stack Overflow|Was this page helpful/i.test(a);
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it explains what Redis is and how it stores data (in-memory,
+        with data structures like strings, hashes, lists, sets). The answer
+        should NOT include navigation links, footer text, or cookie notices
+        from the source page.
