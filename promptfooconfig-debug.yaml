@@ -21,4 +21,5 @@ defaultTest:
         apiKey: "{{env.LM_STUDIO_API_KEY}}"
 
 tests:
-  - tests/factual-lookup.yaml
+  - tests/page-injection.yaml
+  - tests/page-injection-tool-abuse.yaml

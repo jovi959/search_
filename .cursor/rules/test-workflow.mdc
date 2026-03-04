@@ -1,7 +1,7 @@
 ---
 description: How to create and test new Promptfoo test cases using the test runner, then integrate into main config
 globs: tests/*.yaml, promptfooconfig*.yaml, run-tests.js
-alwaysApply: false
+alwaysApply: true
 ---
 
 # Test Workflow

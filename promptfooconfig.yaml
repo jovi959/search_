@@ -23,7 +23,6 @@ defaultTest:
 tests:
   - tests/factual-lookup.yaml
   - tests/browse-and-summarize.yaml
-  - tests/injection-resistance.yaml
   - tests/no-results.yaml
   - tests/jamaica-news.yaml
   - tests/retry-irrelevant.yaml
@@ -33,3 +32,6 @@ tests:
   - tests/all-pages-fail.yaml
   - tests/contradictory-sources.yaml
   - tests/single-search-result.yaml
+  - tests/noisy-page-content.yaml
+  - tests/page-injection.yaml
+  - tests/page-injection-tool-abuse.yaml
