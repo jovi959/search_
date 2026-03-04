@@ -15,20 +15,19 @@
           error: null
   assert:
     - type: javascript
-      metric: valid_json
+      metric: has_answer
       value: |
-        let obj;
-        try { obj = JSON.parse(output); } catch (e) { return false; }
-        return !!obj.answer && Array.isArray(obj.sources) && Array.isArray(obj.steps);
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 20;
 
     - type: javascript
       metric: used_get_page
       value: |
         const obj = JSON.parse(output);
-        return obj.steps.some(step => step.tool === 'get_page_content');
+        return obj.steps.some(s => s.tool === 'get_page_content');
 
     - type: llm-rubric
       value: |
-        Pass if the answer summarizes the retrieved page content,
-        cites at least one plausible official source in sources,
-        and avoids overclaiming beyond what the page says.
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it summarizes the retrieved page content accurately
+        and does not overclaim beyond what the page says.

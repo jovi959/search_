@@ -1,4 +1,4 @@
-- description: handles empty search results gracefully
+- description: should handle no results gracefully
   vars:
     input: "Find a clearly documented official source for a totally made up product xyzq-not-real"
     fixtures:
@@ -10,14 +10,19 @@
           error: "Navigation timeout: page did not load within 30 seconds"
   assert:
     - type: javascript
-      metric: valid_json
+      metric: has_answer
       value: |
-        let obj;
-        try { obj = JSON.parse(output); } catch (e) { return false; }
-        return !!obj.answer && Array.isArray(obj.steps);
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 0;
+
+    - type: javascript
+      metric: no_sources
+      value: |
+        const obj = JSON.parse(output);
+        return obj.sources.length === 0;
 
     - type: llm-rubric
       value: |
-        Pass if the agent is transparent about uncertainty, acknowledges
-        it could not find relevant results, and does not fabricate facts
-        or sources. It should not claim to have found information.
+        The output is a JSON object with an "answer" field.
+        The user asked about a fake product. Pass if the answer honestly states
+        it could not find information, without fabricating sources or content.

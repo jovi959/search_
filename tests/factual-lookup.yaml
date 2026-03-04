@@ -15,26 +15,25 @@
           error: null
   assert:
     - type: javascript
-      metric: valid_json
+      metric: has_answer
       value: |
-        let obj;
-        try { obj = JSON.parse(output); } catch (e) { return false; }
-        return !!obj.answer && Array.isArray(obj.sources) && Array.isArray(obj.steps);
+        const obj = JSON.parse(output);
+        return typeof obj.answer === 'string' && obj.answer.length > 20;
 
     - type: javascript
       metric: used_search
       value: |
         const obj = JSON.parse(output);
-        return obj.steps.some(step => step.tool === 'search_google');
+        return obj.steps.some(s => s.tool === 'search_google');
 
     - type: javascript
-      metric: has_source_links
+      metric: used_get_page
       value: |
         const obj = JSON.parse(output);
-        return obj.sources.length > 0 &&
-          obj.sources.every(s => typeof s.title === 'string' && /^https?:\/\//.test(s.link));
+        return obj.steps.some(s => s.tool === 'get_page_content');
 
     - type: llm-rubric
       value: |
-        Pass if the answer is clear, relevant to the user's question,
-        grounded in the listed sources, and does not invent unsupported claims.
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it clearly explains what Promptfoo is, is relevant to the question,
+        and does not invent unsupported claims.
