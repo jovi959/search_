@@ -133,7 +133,7 @@ Skip `tool_name` when:
 
 Verbose descriptions with examples work well for larger models (9B+) that can process long contexts. For smaller models (4B and under), keep descriptions short and direct — long descriptions eat context and can confuse the model.
 
-Current `definitions.json` uses short descriptions optimized for the 4B tester model. The full structured versions are documented in the plan file for reference and can be swapped in when using a larger model.
+See `tools/definitions.json` for working examples of this format applied to `search_google` and `get_page_content`.
 
 ## How the Tool System Works
 
