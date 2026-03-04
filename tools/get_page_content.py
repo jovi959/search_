@@ -1,8 +1,8 @@
 """
-Real page content fetcher using SeleniumBase UC mode.
+Real page content fetcher using SeleniumBase.
 
-Accepts a live SeleniumBase Driver instance, navigates to the URL,
-and returns cleaned text content matching the agent's expected schema.
+Uses regular navigation for content pages (UC stealth is only needed for Google).
+Falls back gracefully on connection or timeout errors.
 """
 
 from bs4 import BeautifulSoup
@@ -16,20 +16,35 @@ def get_page_content(driver, url: str) -> dict:
     or {"url": ..., "error": ...} on failure.
     """
     try:
-        driver.uc_open_with_reconnect(url, reconnect_time=4)
+        driver.default_get_open(url)
         driver.sleep(2)
+    except Exception:
+        try:
+            driver.execute_script(f"window.location.href = '{_escape_js(url)}';")
+            driver.sleep(3)
+        except Exception as nav_exc:
+            return {"url": url, "error": f"Navigation failed: {nav_exc}"}
 
+    try:
         page_source = driver.get_page_source()
-        text = _extract_text(page_source)
+    except Exception:
+        try:
+            page_source = driver.execute_script("return document.documentElement.outerHTML;")
+        except Exception as src_exc:
+            return {"url": url, "error": f"Could not read page source: {src_exc}"}
 
-        if not text.strip():
-            return {"url": url, "error": "Page loaded but no readable text found"}
+    text = _extract_text(page_source)
 
-        trimmed = _trim(text, max_chars=12000)
-        return {"url": url, "page_text": trimmed}
+    if not text.strip():
+        return {"url": url, "error": "Page loaded but no readable text found"}
 
-    except Exception as exc:
-        return {"url": url, "error": f"get_page_content failed: {exc}"}
+    trimmed = _trim(text, max_chars=12000)
+    return {"url": url, "page_text": trimmed}
+
+
+def _escape_js(s: str) -> str:
+    """Escape a string for safe embedding in a JS single-quoted literal."""
+    return s.replace("\\", "\\\\").replace("'", "\\'")
 
 
 def _extract_text(html: str) -> str:

@@ -1,63 +1,111 @@
 # Web Search Agent
 
-A local web research agent tested with [Promptfoo](https://www.promptfoo.dev/). The agent uses an LLM (via LM Studio) to search the web and summarize pages, with plans to integrate SeleniumBase for real browser automation.
+A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI and the agent searches Google, reads pages, and writes a summarised answer.
+
+The project also includes a full [Promptfoo](https://www.promptfoo.dev/) test suite that validates agent behaviour using mock fixtures — no browser needed for tests.
 
 ## Project Structure
 
 ```
 web_search_mcp/
-├── agent.py                  # Core agentic loop (prompt in, answer out)
+├── main.py                       # CLI entry point (real browser dispatch)
+├── agent.py                      # Core agentic loop (prompt → tool calls → answer)
+├── .env                          # Config: model, API URL, HEADLESS flag
 ├── prompts/
-│   ├── websearch-agent.txt   # Agent prompt template (uses {{input}})
-│   └── loader.py             # Loads and renders prompt templates
+│   ├── websearch-agent.txt       # Agent system prompt (uses {{input}})
+│   └── loader.py                 # Loads and renders prompt templates
 ├── tools/
-│   ├── definitions.json      # Tool definitions (OpenAI function-calling format)
-│   └── registry.py           # Loads definitions for Python consumption
+│   ├── search_google.json        # Tool definition (OpenAI function-calling format)
+│   ├── search_google.py          # Real Google search via SeleniumBase UC mode
+│   ├── get_page_content.json     # Tool definition
+│   ├── get_page_content.py       # Real page fetcher via SeleniumBase
+│   └── registry.py               # Loads all *.json tool defs for Python
 ├── providers/
-│   └── websearch_agent.py    # Promptfoo exec provider (wires mock dispatch into agent)
-├── tests/
-│   ├── factual-lookup.yaml   # Can the agent answer a factual question?
-│   ├── browse-and-summarize.yaml  # Does it read pages and summarize?
-│   ├── injection-resistance.yaml  # Does it resist prompt injection?
-│   ├── no-results.yaml       # Does it handle empty results gracefully?
-│   ├── jamaica-news.yaml     # Can it find multiple news items?
-│   └── retry-irrelevant.yaml # Does it retry when results are off-topic?
-├── run-tests.js              # Test runner wrapper (clean pass/fail output)
-├── promptfooconfig.yaml      # Main Promptfoo eval config
-├── promptfooconfig-debug.yaml # Single-test config for iterating
-├── requirements.txt          # Python deps (openai)
-└── package.json              # Node deps (promptfoo)
+│   └── websearch_agent.py        # Promptfoo exec provider (mock dispatch for tests)
+├── tests/                        # Promptfoo test cases (YAML with fixtures)
+│   ├── factual-lookup.yaml
+│   ├── browse-and-summarize.yaml
+│   ├── multi-page-synthesis.yaml
+│   ├── specific-fact-extraction.yaml
+│   ├── jamaica-news.yaml
+│   ├── noisy-page-content.yaml
+│   ├── contradictory-sources.yaml
+│   ├── single-search-result.yaml
+│   ├── no-results.yaml
+│   ├── retry-irrelevant.yaml
+│   ├── all-pages-fail.yaml
+│   ├── page-error-fallback.yaml
+│   ├── page-injection.yaml
+│   └── page-injection-tool-abuse.yaml
+├── run-tests.js                  # Test runner wrapper (clean pass/fail output)
+├── promptfooconfig.yaml          # Main Promptfoo eval config
+├── promptfooconfig-debug.yaml    # Single-test config for iterating
+├── setup.bat                     # One-click Windows setup
+├── requirements.txt              # Python deps (openai, seleniumbase, bs4)
+└── package.json                  # Node deps (promptfoo)
 ```
 
 ## Prerequisites
 
-- **Node.js** (for Promptfoo)
 - **Python 3.10+**
-- **LM Studio** running locally with an OpenAI-compatible API
+- **Node.js** (for Promptfoo tests)
+- **Google Chrome** (SeleniumBase drives it via UC mode)
+- **LM Studio** running with an OpenAI-compatible API
 
 ## Setup
 
+Run `setup.bat` for a guided install, or do it manually:
+
 ```bash
-# Node dependencies
+# Node dependencies (for tests)
 npm install
 
 # Python virtual environment
 python -m venv .venv
-.venv/Scripts/activate   # Windows
-# source .venv/bin/activate  # macOS/Linux
-pip install -r requirements.txt
+.venv\Scripts\activate            # Windows
+# source .venv/bin/activate       # macOS/Linux
+python -m pip install -r requirements.txt
 ```
 
 ## Configuration
 
-Edit `promptfooconfig.yaml` to point at your LM Studio instance:
+All settings live in `.env`:
 
-- **tester** model: the LLM that powers the agent (makes tool calls, writes answers)
-- **defaultTest provider**: the LLM that grades `llm-rubric` assertions (judger)
+```
+LM_STUDIO_BASE_URL=http://192.168.2.11:1234/v1
+LM_STUDIO_API_KEY=lm-studio
+AGENT_MODEL=locooperator-4b@q8_0
+GRADER_MODEL=gemma-3-4b-it
+HEADLESS=true
+```
 
-Both default to `http://192.168.2.11:1234/v1`.
+| Variable             | Purpose                                      |
+|----------------------|----------------------------------------------|
+| `LM_STUDIO_BASE_URL`| OpenAI-compatible API endpoint                |
+| `LM_STUDIO_API_KEY`  | API key (LM Studio default: `lm-studio`)     |
+| `AGENT_MODEL`        | Model the agent uses for reasoning/tool calls |
+| `GRADER_MODEL`       | Model Promptfoo uses to grade LLM rubrics     |
+| `HEADLESS`           | `true` = no browser window, `false` = visible |
+
+## Usage
+
+```bash
+# Ask a question
+python main.py "What is the latest news in Jamaica?"
+
+# Watch the browser (set HEADLESS=false in .env)
+python main.py "Who is the current PM of Jamaica?"
+```
+
+The agent will:
+1. Search Google using SeleniumBase UC mode (stealth)
+2. Read the best result pages
+3. Summarise the findings into a clear answer
+4. Print the answer, sources, and tool call steps
 
 ## Running Tests
+
+Tests use Promptfoo with mock fixtures — no browser, no real web requests.
 
 ```bash
 # Run all tests (clean pass/fail summary)
@@ -73,10 +121,6 @@ npm test -- tests/factual-lookup.yaml tests/no-results.yaml
 npm run view
 ```
 
-The test runner (`run-tests.js`) silences all raw promptfoo output and writes it to `output/eval.log`. Structured results go to `output/results.json`. The terminal only shows a clean summary — pass/fail counts and details of any failing tests.
-
-For raw promptfoo output (table, progress bar), use `npm run eval` directly.
-
 ## How It Works
 
 ### Agent Loop (`agent.py`)
@@ -84,40 +128,21 @@ For raw promptfoo output (table, progress bar), use `npm run eval` directly.
 1. Sends the rendered prompt to the LLM with tool definitions
 2. If the LLM requests a tool call, dispatches it and feeds the result back
 3. Repeats up to 5 rounds until the LLM produces a final text answer
-4. Wraps the answer with internally-tracked steps and sources
+4. Returns the answer with tracked steps and sources
 
-### Testing with Promptfoo
+The agent takes a generic `dispatch` callable — it doesn't know whether tools are real or mocked.
 
-Promptfoo calls `providers/websearch_agent.py` as an exec provider. Test YAMLs provide mock tool responses inline via `vars.fixtures`, so no real web requests are made during testing.
+### Real Tools (CLI via `main.py`)
 
-Each test case defines:
-- **vars.input** — the user's question
-- **vars.fixtures** — mock responses for each tool (sequential per tool)
-- **assert** — JavaScript checks and LLM rubric grading
+`main.py` creates a SeleniumBase UC browser and wires real tool implementations into the dispatch:
 
-### Tool Definitions (`tools/definitions.json`)
+- **`tools/search_google.py`** — Navigates to Google, types the query, parses organic results (title, link, snippet)
+- **`tools/get_page_content.py`** — Navigates to a URL, strips HTML noise, returns clean text
 
-A single JSON file defines all tools in OpenAI function-calling format. Both Python (`tools/registry.py`) and Promptfoo tests read from this file — no duplication.
+### Mock Tools (Tests via Promptfoo)
 
-### Prompts (`prompts/`)
+`providers/websearch_agent.py` serves fixture data from test YAMLs. Each test defines `vars.fixtures` with pre-recorded tool responses, so tests are deterministic and fast.
 
-Prompt templates live in `.txt` files with `{{variable}}` placeholders. The Python `prompts/loader.py` module renders them, making prompts reusable from any Python code.
+### Tool Definitions (`tools/*.json`)
 
-## Adding a New Tool
-
-1. Add the tool definition to `tools/definitions.json`
-2. Add mock fixture data in your test YAML under `vars.fixtures.<tool_name>`
-3. The agent loop will automatically pick it up via `get_openai_tools()`
-
-## Adding a New Test
-
-1. Create a new YAML file in `tests/`
-2. Iterate on it with the test runner:
-   ```bash
-   npm test -- tests/<name>.yaml
-   ```
-3. Once passing, add it to `promptfooconfig.yaml` under `tests:`
-4. Run the full suite to check for regressions:
-   ```bash
-   npm test
-   ```
+Each tool has its own JSON file in OpenAI function-calling format. `tools/registry.py` loads all `*.json` files at import time and exposes them to the agent.

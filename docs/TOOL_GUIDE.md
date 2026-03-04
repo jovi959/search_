@@ -4,15 +4,24 @@ How to add and configure tools for the web search agent.
 
 ## Overview
 
-Tools are defined once in `tools/definitions.json` using the OpenAI function-calling format. Both Python (via `tools/registry.py`) and Promptfoo tests read from this single file — no duplication across languages.
+Each tool is defined by a JSON file in `tools/` using the OpenAI function-calling format (e.g. `tools/search_google.json`). The `tools/registry.py` module loads all `*.json` files at import time and exposes them to the agent.
 
-The agent loop in `agent.py` automatically picks up any tool in `definitions.json`. You just need to provide a dispatch implementation (mock for testing, real for production).
+For real execution, each tool also has a Python implementation file (e.g. `tools/search_google.py`) that accepts a SeleniumBase driver and returns structured results.
+
+The agent loop in `agent.py` doesn't know or care whether tools are real or mocked — it receives a `dispatch` callable and uses it for every tool call.
+
+## Current Tools
+
+| Tool               | Definition                    | Implementation                | Purpose                     |
+|--------------------|-------------------------------|-------------------------------|-----------------------------|
+| `search_google`    | `tools/search_google.json`    | `tools/search_google.py`      | Google search via UC mode   |
+| `get_page_content` | `tools/get_page_content.json` | `tools/get_page_content.py`   | Fetch and clean page text   |
 
 ## Step-by-Step: Adding a New Tool
 
-### 1. Define the tool in `definitions.json`
+### 1. Create the tool definition JSON
 
-Add a new entry to the JSON array:
+Add a new file in `tools/`, e.g. `tools/your_tool.json`:
 
 ```json
 {
@@ -34,9 +43,32 @@ Add a new entry to the JSON array:
 }
 ```
 
-### 2. Add mock fixtures in your test YAML
+The registry picks it up automatically — no code changes needed.
 
-Under `vars.fixtures`, add an entry matching your tool name. Each entry is a list of responses the mock dispatch will return sequentially:
+### 2. Create the real implementation
+
+Add `tools/your_tool.py`:
+
+```python
+def your_tool_name(driver, param_name: str) -> dict:
+    """Use the SeleniumBase driver to do something and return results."""
+    # ... browser automation logic ...
+    return {"result_field": "value"}
+```
+
+Then register it in `main.py`'s `build_dispatch`:
+
+```python
+tool_map = {
+    "search_google": lambda args: search_google(driver, args["query"]),
+    "get_page_content": lambda args: get_page_content(driver, args["url"]),
+    "your_tool_name": lambda args: your_tool_name(driver, args["param_name"]),
+}
+```
+
+### 3. Add mock fixtures in your test YAML
+
+Under `vars.fixtures`, add an entry matching your tool name. Each entry is a list of responses the mock dispatch returns sequentially:
 
 ```yaml
 - description: test for new tool
@@ -48,14 +80,12 @@ Under `vars.fixtures`, add an entry matching your tool name. Each entry is a lis
             link: "https://example.com"
       your_tool_name:
         - field_a: "first call response"
-          field_b: 42
         - field_a: "second call response"
-          field_b: 99
 ```
 
-If the agent calls `your_tool_name` twice, it gets the first fixture on call 1 and the second on call 2. If it calls more times than there are fixtures, the last one repeats.
+If the agent calls `your_tool_name` twice, it gets the first fixture on call 1 and the second on call 2. Extra calls repeat the last fixture.
 
-### 3. Add assertions in the test YAML
+### 4. Add assertions in the test YAML
 
 ```yaml
   assert:
@@ -66,24 +96,11 @@ If the agent calls `your_tool_name` twice, it gets the first fixture on call 1 a
         return obj.steps.some(s => s.tool === 'your_tool_name');
 ```
 
-### 4. Wire up the real implementation (production)
-
-When building the real dispatch (not mock), implement the actual tool logic and register it. The dispatch function signature is:
-
-```python
-def dispatch(tool_name: str, args: dict) -> dict:
-    ...
-```
-
-It receives the tool name and arguments the LLM passed, and returns a dict that gets serialized back to the LLM as a tool result.
-
 ## Writing Good Tool Descriptions
 
-The tool `description` field is the primary way you instruct the LLM on how and when to use a tool. A good description can be the difference between a working agent and a broken one.
+The tool `description` field is the primary way you instruct the LLM on how and when to use a tool.
 
 ### Structure
-
-Follow this template for rich, structured descriptions:
 
 ```
 One-line summary of what the tool does and returns.
@@ -123,31 +140,31 @@ Skip `tool_name` when:
 
 ### Key Principles
 
-- **When to Use / When NOT to Use** prevents the LLM from calling the wrong tool or calling it at the wrong time
+- **When to Use / When NOT to Use** prevents the LLM from calling the wrong tool
 - **Examples with reasoning** teach by showing concrete good and bad patterns
-- **Reasoning tags** always start with `Good:` or `BAD:` for scannability
-- **Usage section** tells the LLM what to do with the tool's output
 - **Parameter descriptions** should include concrete examples of good inputs
 
 ### Trade-off: Description Length vs Model Size
 
-Verbose descriptions with examples work well for larger models (9B+) that can process long contexts. For smaller models (4B and under), keep descriptions short and direct — long descriptions eat context and can confuse the model.
-
-See `tools/definitions.json` for working examples of this format applied to `search_google` and `get_page_content`.
+Verbose descriptions with examples work well for larger models (9B+). For smaller models (4B and under), keep descriptions short — long descriptions eat context and can confuse the model.
 
 ## How the Tool System Works
 
-### `tools/definitions.json`
+### `tools/*.json`
 
-The single source of truth. An array of OpenAI function-calling tool definitions. Both Python and Node.js (Promptfoo) read from this file.
+Each JSON file defines one tool in OpenAI function-calling format. This is the single source of truth for that tool's schema.
 
 ### `tools/registry.py`
 
-Loads `definitions.json` at import time and exposes:
+Loads all `*.json` files at import time and exposes:
 
 - `ALL_TOOLS` — the raw list of tool defs
 - `TOOL_DEFS_BY_NAME` — dict keyed by tool name for quick lookup
-- `get_openai_tools()` — returns the list for passing to `client.chat.completions.create(tools=...)`
+- `get_openai_tools()` — returns the list for `client.chat.completions.create(tools=...)`
+
+### `tools/*.py` (real implementations)
+
+Each tool's Python file exports a function that takes a SeleniumBase driver as the first argument. `main.py` wires these into the dispatch closure.
 
 ### Mock dispatch (testing)
 
@@ -161,8 +178,8 @@ def dispatch(tool_name: str, args: dict):
     return entries[min(idx, len(entries) - 1)]
 ```
 
-It serves fixture responses sequentially per tool. No file I/O — all mock data is inline in the test YAML and passed through by Promptfoo.
+No browser, no network — all mock data is inline in the test YAML.
 
 ### Agent loop (`agent.py`)
 
-The agent doesn't know or care whether tools are mocked. It receives a `dispatch` callable and uses it whenever the LLM makes a tool call. This makes the same agent code work for both testing and production.
+The agent receives a `dispatch` callable and uses it whenever the LLM makes a tool call. Same code for real and mock execution.
