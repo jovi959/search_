@@ -49,12 +49,13 @@ def run(prompt: str, client: OpenAI, model: str, dispatch) -> dict:
                 all_steps.append({"tool": fn_name, "input": fn_args})
 
                 result = dispatch(fn_name, fn_args)
+                content = _wrap_tool_result(fn_name, result)
 
                 messages.append(
                     {
                         "role": "tool",
                         "tool_call_id": tool_call.id,
-                        "content": json.dumps(result),
+                        "content": content,
                     }
                 )
         else:
@@ -63,6 +64,18 @@ def run(prompt: str, client: OpenAI, model: str, dispatch) -> dict:
 
     last_content = messages[-1].get("content", "") if isinstance(messages[-1], dict) else ""
     return _build_result(last_content, all_steps)
+
+
+def _wrap_tool_result(tool_name: str, result) -> str:
+    """Wrap get_page_content results in <page_content> tags to mark untrusted data."""
+    if tool_name == "get_page_content" and isinstance(result, dict):
+        page_text = result.get("page_text") or ""
+        url = result.get("url", "")
+        error = result.get("error")
+        if error:
+            return json.dumps({"url": url, "error": error})
+        return f"<page_content url=\"{url}\">\n{page_text}\n</page_content>"
+    return json.dumps(result)
 
 
 def _strip_thinking(text: str) -> str:
