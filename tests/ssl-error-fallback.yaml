@@ -1,0 +1,48 @@
+- description: "SSL error fallback — first page returns Chrome privacy/certificate error, agent should recognize it as failed and try another URL"
+  vars:
+    input: "What are the safety travel tips for visiting Jamaica?"
+    fixtures:
+      search_google:
+        - - title: "Travel Safety - Government of Jamaica"
+            link: "https://www.jamaica.gov.jm/safety"
+          - title: "Jamaica Travel Advisory - Travel.State.Gov"
+            link: "https://travel.state.gov/jamaica"
+          - title: "Jamaica Safety Tips - Lonely Planet"
+            link: "https://www.lonelyplanet.com/jamaica/safety"
+      get_page_content:
+        - page_text: "Privacy error\nYour connection is not private\nAttackers might be trying to steal your information from\nwww.jamaica.gov.jm\n(for example, passwords, messages, or credit cards).\nLearn more about this warning\nnet::ERR_CERT_COMMON_NAME_INVALID\nSubject:\nwww.gov.jm\nIssuer:\nDigiCert Global G2 TLS RSA SHA256 2020 CA1\nExpires on:\nJul 24, 2026\nCurrent date:\nMar 5, 2026\nPEM encoded chain:\n-----BEGIN CERTIFICATE-----\nMIIFUDCCBDigAwIBAgISBnkCbwRQeGHTJJflpLrCNkFNMA0GCSqGSIb3DQEBCwUA\nMDMxCzAJBgNVBAYTAlVTMRYwFAYDVQQKEw1MZXQncyBFbmNyeXB0MQwwCgYDVQQD\n-----END CERTIFICATE-----\nThis server could not prove that it is www.jamaica.gov.jm; its security certificate is from *.gov.jm."
+          url: "https://www.jamaica.gov.jm/safety"
+          error: null
+        - page_text: "Jamaica Travel Tips: Stay in well-known tourist areas such as Montego Bay, Ocho Rios, and Negril. Avoid walking alone at night. Use licensed taxis and hotel-arranged transportation. Keep valuables in hotel safes. Be cautious at ATMs and avoid displaying expensive jewelry. Register with your embassy before travelling. Tap water is generally safe in resorts but drink bottled water elsewhere. Hurricane season runs June through November."
+          url: "https://travel.state.gov/jamaica"
+          error: null
+  assert:
+    - type: javascript
+      metric: tried_another_page
+      value: |
+        const obj = JSON.parse(output);
+        const pages = obj.steps.filter(s => s.tool === 'get_page_content');
+        return pages.length >= 2;
+
+    - type: javascript
+      metric: no_certificate_in_answer
+      value: |
+        const obj = JSON.parse(output);
+        const a = obj.answer.toLowerCase();
+        return !a.includes('pem encoded') &&
+               !a.includes('begin certificate') &&
+               !a.includes('err_cert') &&
+               !a.includes('privacy error') &&
+               !a.includes('connection is not private');
+
+    - type: javascript
+      metric: answer_about_safety
+      value: |
+        const obj = JSON.parse(output);
+        return /safety|travel|tourist|caution|avoid/i.test(obj.answer);
+
+    - type: llm-rubric
+      value: |
+        The output is a JSON object with an "answer" field. Evaluate the answer:
+        Pass if it provides useful Jamaica travel safety tips and does NOT
+        include any SSL certificate data, privacy errors, or raw browser error text.

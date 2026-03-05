@@ -33,5 +33,6 @@ tests:
   - tests/contradictory-sources.yaml
   - tests/single-search-result.yaml
   - tests/noisy-page-content.yaml
+  - tests/ssl-error-fallback.yaml
   - tests/page-injection.yaml
   - tests/page-injection-tool-abuse.yaml

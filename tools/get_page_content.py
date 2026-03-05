@@ -2,10 +2,24 @@
 Real page content fetcher using SeleniumBase.
 
 Uses regular navigation for content pages (UC stealth is only needed for Google).
-Falls back gracefully on connection or timeout errors.
+Falls back gracefully on connection, timeout, and SSL errors.
 """
 
+import re
+
 from bs4 import BeautifulSoup
+
+_CHROME_ERROR_PATTERNS = [
+    (r"NET::ERR_CERT_", "SSL certificate error"),
+    (r"net::ERR_CERT_", "SSL certificate error"),
+    (r"ERR_NAME_NOT_RESOLVED", "DNS resolution failed"),
+    (r"ERR_CONNECTION_REFUSED", "Connection refused"),
+    (r"ERR_CONNECTION_TIMED_OUT", "Connection timed out"),
+    (r"ERR_CONNECTION_RESET", "Connection reset"),
+    (r"ERR_TIMED_OUT", "Request timed out"),
+    (r"ERR_SSL_PROTOCOL_ERROR", "SSL protocol error"),
+    (r"ERR_INTERNET_DISCONNECTED", "No internet connection"),
+]
 
 
 def get_page_content(driver, url: str) -> dict:
@@ -33,6 +47,10 @@ def get_page_content(driver, url: str) -> dict:
         except Exception as src_exc:
             return {"url": url, "error": f"Could not read page source: {src_exc}"}
 
+    error = _detect_error_page(page_source)
+    if error:
+        return {"url": url, "error": error}
+
     text = _extract_text(page_source)
 
     if not text.strip():
@@ -40,6 +58,25 @@ def get_page_content(driver, url: str) -> dict:
 
     trimmed = _trim(text, max_chars=12000)
     return {"url": url, "page_text": trimmed}
+
+
+def _detect_error_page(html: str) -> str | None:
+    """Return an error message if Chrome is showing an error/interstitial page."""
+    if not html:
+        return None
+
+    for pattern, label in _CHROME_ERROR_PATTERNS:
+        if re.search(pattern, html):
+            return f"Page blocked by browser: {label}"
+
+    if 'id="main-frame-error"' in html:
+        return "Page blocked by browser: Chrome error page"
+    if 'class="interstitial-wrapper"' in html:
+        return "Page blocked by browser: security interstitial"
+    if "Your connection is not private" in html and "PEM encoded chain" in html:
+        return "Page blocked by browser: SSL certificate error"
+
+    return None
 
 
 def _escape_js(s: str) -> str:
