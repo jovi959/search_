@@ -6,9 +6,12 @@ Spins up a SeleniumBase UC browser, wires the real tool implementations
 into a dispatch function, and runs the agent loop.
 """
 
+import io
 import os
 import sys
 from pathlib import Path
+
+sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent / ".env")
@@ -61,7 +64,7 @@ def main():
     print(f"[*] Headless: {headless}")
     print()
 
-    driver = Driver(uc=True, headless=headless)
+    driver = Driver(uc=True, headless=headless, page_load_strategy="eager")
     try:
         dispatch = build_dispatch(driver)
         result = run(prompt, client, model, dispatch)

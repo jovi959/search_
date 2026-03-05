@@ -1,11 +1,15 @@
 """
 Real Google search using SeleniumBase UC mode.
 
-Navigates to Google, types the query into the search box, and parses
-organic results from the SERP.
+Navigates to Google, types the query, and parses organic results.
+Waits only for result DOM elements — never for full page readyState.
 """
 
+import time
 from urllib.parse import quote_plus
+
+_RESULT_WAIT = 4
+_POLL = 0.1
 
 
 def search_google(driver, query: str) -> list[dict]:
@@ -16,13 +20,12 @@ def search_google(driver, query: str) -> list[dict]:
     On failure, returns [{"error": "<message>"}].
     """
     try:
-        driver.uc_open_with_reconnect("https://www.google.com/", reconnect_time=4)
-        driver.sleep(1)
+        driver.get("https://www.google.com/")
 
         _dismiss_consent(driver)
 
         _type_query(driver, query)
-        driver.sleep(2)
+        _wait_for_results(driver)
 
         results = _parse_results(driver)
         if not results:
@@ -30,8 +33,8 @@ def search_google(driver, query: str) -> list[dict]:
 
         if not results:
             url = f"https://www.google.com/search?q={quote_plus(query)}"
-            driver.uc_open_with_reconnect(url, reconnect_time=4)
-            driver.sleep(2)
+            driver.get(url)
+            _wait_for_results(driver)
             results = _parse_results(driver)
             if not results:
                 results = _parse_results_fallback(driver)
@@ -40,6 +43,19 @@ def search_google(driver, query: str) -> list[dict]:
 
     except Exception as exc:
         return [{"error": f"search_google failed: {exc}"}]
+
+
+def _wait_for_results(driver, timeout: float = _RESULT_WAIT):
+    """Poll until Google result elements appear in the DOM."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            if driver.find_elements("css selector", "div.g") or \
+               driver.find_elements("css selector", "a h3"):
+                return
+        except Exception:
+            pass
+        time.sleep(_POLL)
 
 
 def _type_query(driver, query: str):
@@ -51,10 +67,7 @@ def _type_query(driver, query: str):
                 return
         except Exception:
             continue
-    driver.uc_open_with_reconnect(
-        f"https://www.google.com/search?q={quote_plus(query)}",
-        reconnect_time=4,
-    )
+    driver.get(f"https://www.google.com/search?q={quote_plus(query)}")
 
 
 def _dismiss_consent(driver):
@@ -67,7 +80,7 @@ def _dismiss_consent(driver):
         ]:
             if driver.is_element_visible(selector):
                 driver.click(selector)
-                driver.sleep(1)
+                time.sleep(0.5)
                 break
     except Exception:
         pass
