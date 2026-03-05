@@ -80,7 +80,7 @@ if exist .venv\Scripts\python.exe (
 )
 
 if "!VENV_DONE!"=="1" (
-    .venv\Scripts\python -c "import openai; import seleniumbase" >nul 2>&1
+    .venv\Scripts\python -c "import openai; import seleniumbase; import fastmcp" >nul 2>&1
     if !errorlevel! equ 0 (
         set "PIP_DONE=1"
     )
@@ -92,7 +92,7 @@ if "!NODE_DONE!"=="1" if "!VENV_DONE!"=="1" if "!PIP_DONE!"=="1" (
     echo.
     echo   [OK] node_modules    (promptfoo found)
     echo   [OK] .venv           (exists)
-    echo   [OK] Python packages (openai + seleniumbase)
+    echo   [OK] Python packages (openai + seleniumbase + fastmcp)
     echo ----------------------------------------
     echo.
     choice /C YN /M "Reinstall anyway? (Y/N)"
@@ -100,9 +100,10 @@ if "!NODE_DONE!"=="1" if "!VENV_DONE!"=="1" if "!PIP_DONE!"=="1" (
         echo.
         echo Skipping install. You're good to go!
         echo.
-        echo   python main.py "your question"   Run the agent
-        echo   npm run eval                     Run all tests
-        echo   npm run view                     Open results in browser
+        echo   python main.py "your question"     Run the agent (CLI)
+        echo   python mcp_server.py               Start the MCP server
+        echo   npm run eval                       Run all tests
+        echo   npm run view                       Open results in browser
         echo.
         pause
         exit /b 0
@@ -263,19 +264,28 @@ if %errorlevel% neq 0 (
     echo   [X] seleniumbase package not working
 )
 
+.venv\Scripts\python -c "import fastmcp; print('  [OK] fastmcp', fastmcp.__version__)" 2>&1
+if %errorlevel% neq 0 (
+    echo   [X] fastmcp package not working
+)
+
 echo.
 echo ========================================
 echo  Setup complete!
 echo.
 echo  Quick start:
-echo    python main.py "your question"   Run the agent
-echo    npm run eval                     Run all tests
-echo    npm run view                     Open results in browser
+echo    python main.py "your question"     Run the agent (CLI)
+echo    python mcp_server.py               Start the MCP server
+echo    npm run eval                       Run all tests
+echo    npm run view                       Open results in browser
+echo.
+echo  MCP server endpoint:
+echo    http://localhost:8000/mcp/
 echo.
 echo  Debug a single test:
 echo    npx promptfoo eval --no-cache -c promptfooconfig-debug.yaml
 echo.
 echo  Configuration:
-echo    Edit .env to change model, API URL, or HEADLESS mode
+echo    Edit .env to change model, API URL, HEADLESS, or MCP port
 echo ========================================
 pause

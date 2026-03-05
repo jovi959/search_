@@ -1,8 +1,8 @@
 """
 Page content fetcher using SeleniumBase.
 
-Uses ``driver.get()`` for navigation and grabs the DOM immediately
-without waiting for all resources to finish loading.
+Uses regular navigation for content pages (UC stealth is only needed for Google).
+Falls back gracefully on connection, timeout, and SSL errors.
 """
 
 import re
@@ -59,17 +59,21 @@ def get_page_content(driver, url: str) -> dict:
 
 
 def _detect_error_page(html: str) -> str | None:
+    """Return an error message if Chrome is showing an error/interstitial page."""
     if not html:
         return None
+
     for pattern, label in _CHROME_ERROR_PATTERNS:
         if re.search(pattern, html):
             return f"Page blocked by browser: {label}"
+
     if 'id="main-frame-error"' in html:
         return "Page blocked by browser: Chrome error page"
     if 'class="interstitial-wrapper"' in html:
         return "Page blocked by browser: security interstitial"
     if "Your connection is not private" in html and "PEM encoded chain" in html:
         return "Page blocked by browser: SSL certificate error"
+
     return None
 
 
