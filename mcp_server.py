@@ -32,7 +32,7 @@ PROMPT_FILE = Path(__file__).resolve().parent / "prompts" / "websearch-agent.txt
 async def browser_lifespan(server):
     """Create a UC browser on startup, tear it down on shutdown."""
     headless = os.environ.get("HEADLESS", "true").lower() == "true"
-    driver = Driver(uc=True, headless=headless)
+    driver = Driver(uc=True, headless=headless, page_load_strategy="eager")
     try:
         yield {"driver": driver}
     finally:
@@ -79,14 +79,14 @@ async def web_research(question: str, ctx: Context) -> str:
 
     step = 0
     while not future.done():
-        await asyncio.sleep(5)
+        await asyncio.sleep(1)
         step += 1
         try:
-            await ctx.report_progress(progress=step, total=step + 2)
+            await ctx.report_progress(progress=step, total=step + 5)
         except Exception:
             pass
 
-    result = await future
+    result = future.result()
 
     answer = result.get("answer", "No answer produced.")
     sources = result.get("sources", [])
