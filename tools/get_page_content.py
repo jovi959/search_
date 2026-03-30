@@ -3,11 +3,13 @@ Page content fetcher using SeleniumBase.
 
 Uses regular navigation for content pages (UC stealth is only needed for Google).
 Falls back gracefully on connection, timeout, and SSL errors.
+Blocked sites (see blocklist.json) return an error without navigation.
 """
 
 import re
 
 from bs4 import BeautifulSoup
+from tools.blocklist import is_blocked
 
 _CHROME_ERROR_PATTERNS = [
     (r"NET::ERR_CERT_", "SSL certificate error"),
@@ -28,7 +30,12 @@ def get_page_content(driver, url: str) -> dict:
 
     Returns {"url": ..., "page_text": ...} on success,
     or {"url": ..., "error": ...} on failure.
+    Blocked URLs are rejected before any navigation happens.
     """
+    if is_blocked(url):
+        return {"url": url, "page_text": None,
+                "error": "Blocked by blocklist"}
+
     try:
         driver.get(url)
     except Exception:
