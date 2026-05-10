@@ -119,9 +119,11 @@ def _parse_results(driver) -> list[dict]:
 ## Common Pitfalls
 
 - Do not assume every search box is an `input`. Bing uses a `textarea`.
+- Prefer stable selectors such as ids, names, ARIA labels, and `data-*`
+  attributes. Avoid generated class names like DuckDuckGo's search box classes.
 - Do not check for the search box immediately after navigation without waiting.
-- Filter engine-owned links such as `google.com`, `bing.com`, or
-  `search.brave.com`.
+- Filter engine-owned links such as `google.com`, `bing.com`,
+  `search.brave.com`, or `duckduckgo.com`.
 - Return structured result dictionaries, not raw Selenium elements or page text.
 
 ## Reference Implementations
@@ -130,3 +132,5 @@ def _parse_results(driver) -> list[dict]:
   fallback parsing.
 - [bing.py](bing.py): small implementation with wait-then-type behavior.
 - [brave.py](brave.py): small implementation with card and anchor fallbacks.
+- [duckduckgo.py](duckduckgo.py): stable search box selectors and data-attribute
+  result parsing.
