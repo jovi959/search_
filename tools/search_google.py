@@ -5,11 +5,27 @@ Navigates to Google, types the query, and parses organic results.
 Waits only for result DOM elements — never for full page readyState.
 """
 
+import os
 import time
 from urllib.parse import quote_plus
 
 _RESULT_WAIT = 4
 _POLL = 0.1
+
+
+def _stealth_open(driver, url: str):
+    """uc_open_with_reconnect when STEALTH_RECONNECT_TIME > 0, else plain get()."""
+    try:
+        reconnect_time = float(os.environ.get("STEALTH_RECONNECT_TIME", "0"))
+    except ValueError:
+        reconnect_time = 0.0
+    if reconnect_time > 0:
+        try:
+            driver.uc_open_with_reconnect(url, reconnect_time=reconnect_time)
+            return
+        except AttributeError:
+            pass
+    driver.get(url)
 
 
 def search_google(driver, query: str) -> list[dict]:
@@ -20,7 +36,7 @@ def search_google(driver, query: str) -> list[dict]:
     On failure, returns [{"error": "<message>"}].
     """
     try:
-        driver.get("https://www.google.com/")
+        _stealth_open(driver, "https://www.google.com/")
 
         _dismiss_consent(driver)
 
@@ -33,7 +49,7 @@ def search_google(driver, query: str) -> list[dict]:
 
         if not results:
             url = f"https://www.google.com/search?q={quote_plus(query)}"
-            driver.get(url)
+            _stealth_open(driver, url)
             _wait_for_results(driver)
             results = _parse_results(driver)
             if not results:
@@ -67,7 +83,7 @@ def _type_query(driver, query: str):
                 return
         except Exception:
             continue
-    driver.get(f"https://www.google.com/search?q={quote_plus(query)}")
+    _stealth_open(driver, f"https://www.google.com/search?q={quote_plus(query)}")
 
 
 def _dismiss_consent(driver):

@@ -67,17 +67,21 @@ GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
+TOOL_CALL_DELAY=0
+STEALTH_RECONNECT_TIME=0
 ```
 
-| Variable             | Purpose                                      |
-|----------------------|----------------------------------------------|
-| `LM_STUDIO_BASE_URL`| OpenAI-compatible API endpoint                |
-| `LM_STUDIO_API_KEY`  | API key (LM Studio default: `lm-studio`)     |
-| `AGENT_MODEL`        | Model the agent uses for reasoning/tool calls |
-| `GRADER_MODEL`       | Model Promptfoo uses to grade LLM rubrics     |
-| `HEADLESS`           | `true` = no browser window, `false` = visible |
-| `MCP_HOST`           | MCP server bind address (default `0.0.0.0`)  |
-| `MCP_PORT`           | MCP server port (default `8000`)              |
+| Variable                 | Purpose                                                                                                                            |
+|--------------------------|------------------------------------------------------------------------------------------------------------------------------------|
+| `LM_STUDIO_BASE_URL`     | OpenAI-compatible API endpoint                                                                                                     |
+| `LM_STUDIO_API_KEY`      | API key (LM Studio default: `lm-studio`)                                                                                           |
+| `AGENT_MODEL`            | Model the agent uses for reasoning/tool calls                                                                                      |
+| `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
+| `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
+| `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
+| `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
+| `TOOL_CALL_DELAY`        | Seconds to sleep between tool calls (`0` = no delay)                                                                               |
+| `STEALTH_RECONNECT_TIME` | Seconds CDP stays detached during Google navigation. `0` = plain `get()`, any value `> 0` enables `uc_open_with_reconnect` for Google searches |
 
 ## Usage
 
