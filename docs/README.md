@@ -12,7 +12,15 @@ Maintained by hand: commit messages and diffs are the source of truth here; **ne
 
 ### 2026-05-10
 
-Summaries below are from `git show` on local `main`. Within this day, commits are listed **newest first** (see timestamps in `git log` if you need order).
+Summaries below mix `git show` (where a hash is given) with newer work. Within this day, **newest first**.
+
+#### Brave Search engine
+
+| Area | What changed |
+|------|----------------|
+| **New engine** | [`tools/engines/brave.py`](../tools/engines/brave.py) — Brave Search (`search.brave.com`), same `search(driver, query) -> list[dict]` contract as Google and Bing; uses [`stealth_open()`](../tools/_browser_utils.py) and [`human_type()`](../tools/_browser_utils.py). Filters internal Brave links out of organic results. |
+| **Facade** | [`tools/search.py`](../tools/search.py) registers `"brave": brave.search` alongside `google` and `bing`. Set `SEARCH_ENGINE=brave` in `.env`. |
+| **Docs** | [tools/engines/README.md](../tools/engines/README.md) documents the engine contract and lists Brave as a reference implementation. |
 
 #### `5acb12f` — add bing
 
@@ -29,9 +37,9 @@ Summaries below are from `git show` on local `main`. Within this day, commits ar
 | Area | What changed |
 |------|----------------|
 | **Split search** | Removed monolithic `tools/search_google.py` (no longer in tree). Shared stealth/typing → [`tools/_browser_utils.py`](../tools/_browser_utils.py). Google → [`tools/engines/google.py`](../tools/engines/google.py). Bing → [`tools/engines/bing.py`](../tools/engines/bing.py). |
-| **Facade** | New [`tools/search.py`](../tools/search.py): reads `SEARCH_ENGINE`, dispatches to `google.search` or `bing.search`. Tool **name** stays `search_google` everywhere. |
+| **Facade** | New [`tools/search.py`](../tools/search.py): reads `SEARCH_ENGINE`, dispatches to `google.search` or `bing.search`. (Brave was added later—see **Brave Search engine** above.) Tool **name** stays `search_google` everywhere. |
 | **Dispatch** | [`dispatch.py`](../dispatch.py) imports `from tools.search import search` and wires `"search_google": … search(driver, query)`. |
-| **Config** | `SEARCH_ENGINE=google` \| `bing` in [`.env`](../.env). Comments for `STEALTH_RECONNECT_TIME` and `TYPING_WPM` refer to the generic “search box,” not Google only. |
+| **Config** | At this commit: `SEARCH_ENGINE=google` \| `bing`. Later extended with `brave` (see **Brave Search engine**). Comments for `STEALTH_RECONNECT_TIME` and `TYPING_WPM` refer to the generic “search box,” not Google only. |
 | **Docs** | [`docs/README.md`](README.md) and [`docs/TOOL_GUIDE.md`](TOOL_GUIDE.md) updated for `SEARCH_ENGINE`. |
 
 #### `ca558c6` — user agent + human typing (search box)
@@ -53,13 +61,6 @@ Summaries below are from `git show` on local `main`. Within this day, commits ar
 | Area | What changed |
 |------|----------------|
 | **`TOOL_CALL_DELAY`** | Seconds to sleep in [`agent.py`](../agent.py) after each tool dispatch before wrapping the result for the model (`0` = no pause). |
-
-#### This doc + follow-ups (working tree)
-
-| Item | Status |
-|------|--------|
-| **Changelog** | This section (edits in `docs/README.md` may be uncommitted). |
-| **Brave engine** | [`tools/engines/brave.py`](../tools/engines/brave.py) + [`tools/engines/README.md`](../tools/engines/README.md) added locally, and [`tools/search.py`](../tools/search.py) registers `"brave": brave.search`. Use `SEARCH_ENGINE=brave` to select it. |
 
 ### 2026-03-30
 
@@ -145,6 +146,7 @@ AGENT_MODEL=locooperator-4b@q8_0
 GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
 USER_AGENT=
+# google | bing | brave
 SEARCH_ENGINE=google
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
@@ -176,7 +178,7 @@ These settings matter for **CLI and MCP** runs (not Promptfoo mocks). They are r
 |----------|--------|----------------|
 | `TOOL_CALL_DELAY` | **Agent** ([`agent.py`](../agent.py)) | After each tool call completes, sleep this many seconds before adding the tool result to the conversation. Use `0` for fastest iteration; raise it if the LM or site rate-limits when many tools run in a row. |
 | `STEALTH_RECONNECT_TIME` | **Browser / UC** ([`stealth_open()`](../tools/_browser_utils.py)) | **`0`:** load URLs with a normal `get()`. **`> 0`:** use SeleniumBase’s `uc_open_with_reconnect` with that reconnect duration when available. Affects navigations that go through `stealth_open` (including opening the search engine before typing the query). |
-| `TYPING_WPM` | **Search UI** ([`human_type()`](../tools/_browser_utils.py)) | **`0`:** type the whole query at once and submit. **`> 0`:** type at the given words-per-minute (~5 characters per word), with variable burst lengths, pauses between bursts, and rare QWERTY-adjacent mistypes plus backspace. Applied when an engine types into the search field (Google, Bing, etc.). |
+| `TYPING_WPM` | **Search UI** ([`human_type()`](../tools/_browser_utils.py)) | **`0`:** type the whole query at once and submit. **`> 0`:** type at the given words-per-minute (~5 characters per word), with variable burst lengths, pauses between bursts, and rare QWERTY-adjacent mistypes plus backspace. Applied when an engine types into the search field (Google, Bing, Brave, etc.). |
 | `USER_AGENT` | **Browser** ([`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py)) | If non-empty, SeleniumBase starts Chrome with that user-agent string. Leave empty to use the default Chrome UA. |
 
 ## Usage
@@ -190,7 +192,7 @@ python main.py "Who is the current PM of Jamaica?"
 ```
 
 The agent will:
-1. Search using the configured engine (Google by default)
+1. Search using the configured engine (`SEARCH_ENGINE`: `google`, `bing`, or `brave`; default `google`)
 2. Read the best result pages
 3. Summarise the findings into a clear answer
 4. Print the answer, sources, and tool call steps
