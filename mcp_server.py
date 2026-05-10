@@ -32,7 +32,11 @@ PROMPT_FILE = Path(__file__).resolve().parent / "prompts" / "websearch-agent.txt
 async def browser_lifespan(server):
     """Create a UC browser on startup, tear it down on shutdown."""
     headless = os.environ.get("HEADLESS", "true").lower() == "true"
-    driver = Driver(uc=True, headless=headless, page_load_strategy="eager")
+    user_agent = os.environ.get("USER_AGENT") or None
+    driver_kwargs = {"uc": True, "headless": headless, "page_load_strategy": "eager"}
+    if user_agent:
+        driver_kwargs["agent"] = user_agent
+    driver = Driver(**driver_kwargs)
     try:
         yield {"driver": driver}
     finally:

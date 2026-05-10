@@ -65,10 +65,12 @@ LM_STUDIO_API_KEY=lm-studio
 AGENT_MODEL=locooperator-4b@q8_0
 GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
+USER_AGENT=
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
 TOOL_CALL_DELAY=0
 STEALTH_RECONNECT_TIME=0
+TYPING_WPM=0
 ```
 
 | Variable                 | Purpose                                                                                                                            |
@@ -78,10 +80,12 @@ STEALTH_RECONNECT_TIME=0
 | `AGENT_MODEL`            | Model the agent uses for reasoning/tool calls                                                                                      |
 | `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
 | `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
+| `USER_AGENT`             | Custom Chrome user agent string. Empty (default) = Chrome default UA                                                               |
 | `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
 | `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
 | `TOOL_CALL_DELAY`        | Seconds to sleep between tool calls (`0` = no delay)                                                                               |
 | `STEALTH_RECONNECT_TIME` | Seconds CDP stays detached during Google navigation. `0` = plain `get()`, any value `> 0` enables `uc_open_with_reconnect` for Google searches |
+| `TYPING_WPM`             | Words-per-minute when typing the Google query. `0` = instant (default). `> 0` types char-by-char at that speed (assumes ~5 chars/word) |
 
 ## Usage
 

@@ -47,7 +47,11 @@ def main():
     print(f"[*] Headless: {headless}")
     print()
 
-    driver = Driver(uc=True, headless=headless, page_load_strategy="eager")
+    user_agent = os.environ.get("USER_AGENT") or None
+    driver_kwargs = {"uc": True, "headless": headless, "page_load_strategy": "eager"}
+    if user_agent:
+        driver_kwargs["agent"] = user_agent
+    driver = Driver(**driver_kwargs)
     try:
         dispatch = build_dispatch(driver)
         result = run(prompt, client, model, dispatch)
