@@ -1,0 +1,45 @@
+- description: "date-aware latest search - first query includes injected month+year wording (English Month YYYY; no hyphenated YYYY-MM for Google hyphen semantics)"
+  vars:
+    input: "What are the latest official OpenAI announcements today?"
+    fixtures:
+      search_google:
+        - - title: "OpenAI News - Latest official announcements"
+            link: "https://openai.com/news/"
+          - title: "OpenAI Blog"
+            link: "https://openai.com/blog/"
+      get_page_content:
+        - page_text: "OpenAI News. Latest official announcements. OpenAI published developer product updates covering model reliability, tool use improvements, and platform guidance. The news page points readers to official announcements as the source of truth for current OpenAI releases."
+          url: "https://openai.com/news/"
+          error: null
+  assert:
+    - type: javascript
+      metric: used_search
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'search_google');
+
+    - type: javascript
+      metric: first_search_query_includes_year_month
+      value: |
+        const obj = JSON.parse(output);
+        const searches = obj.steps.filter(s => s.tool === 'search_google');
+        const firstQuery = String(searches[0]?.input?.query ?? '');
+
+        const months = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+        const now = new Date();
+        const monthYear = `${months[now.getMonth()]} ${now.getFullYear()}`;
+        return firstQuery.toLowerCase().includes(monthYear.toLowerCase());
+
+    - type: javascript
+      metric: first_search_query_has_no_timestamp
+      value: |
+        const obj = JSON.parse(output);
+        const searches = obj.steps.filter(s => s.tool === 'search_google');
+        const firstQuery = String(searches[0]?.input?.query ?? '');
+        return !/\b\d{1,2}:\d{2}(:\d{2})?\b/.test(firstQuery);
+
+    - type: javascript
+      metric: used_get_page
+      value: |
+        const obj = JSON.parse(output);
+        return obj.steps.some(s => s.tool === 'get_page_content');

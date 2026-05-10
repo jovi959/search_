@@ -4,7 +4,7 @@ A local web research agent powered by an LLM (via LM Studio) and SeleniumBase fo
 
 The project also includes a full [Promptfoo](https://www.promptfoo.dev/) test suite that validates agent behaviour using mock fixtures — no browser needed for tests.
 
-Optional **browser and agent tuning** (`USER_AGENT`, `STEALTH_RECONNECT_TIME`, `TYPING_WPM`, `TOOL_CALL_DELAY`) is documented under [Configuration](#configuration)—see [Browser and agent tuning](#browser-and-agent-tuning).
+Optional **browser and agent tuning** (`USER_AGENT`, `STEALTH_RECONNECT_TIME`, `TYPING_WPM`, `TOOL_CALL_DELAY`, `INJECT_DATE_CONTEXT`) is documented under [Configuration](#configuration)—see [Browser and agent tuning](#browser-and-agent-tuning).
 
 ## Changelog
 
@@ -20,6 +20,15 @@ Summaries below mix `git show` (where a hash is given) with newer work. Within t
 |------|----------------|
 | **Facade** | `SEARCH_ENGINE` now accepts a rotation list (`bing_2,google_2`), an explicit pattern (`bing,google,bing,bing,google`), or a mix (`bing_2,google,brave_3`). |
 | **State** | The cursor lives in-process in [`tools/search.py`](../tools/search.py), survives across MCP requests served by that process, and resets when the process restarts. |
+
+#### Date-aware search context
+
+| Area | What changed |
+|------|----------------|
+| **Prompt** | [`prompts/websearch-agent.txt`](../prompts/websearch-agent.txt) exposes `{{current_date}}` (same style as `{{input}}`): when enabled it is **English month and year** (`May 2026`, no hyphenated `YYYY-MM`, to avoid search operators on `-`). |
+| **Rendering** | [`prompts/loader.py`](../prompts/loader.py) fills `{{current_date}}` for CLI/MCP runs; Promptfoo fills it with `transformVars` in [`promptfooconfig.yaml`](../promptfooconfig.yaml). |
+| **Config** | `.env` adds `INJECT_DATE_CONTEXT=true`; set it to `false` to disable the context injection. |
+| **Tests** | [`tests/date-aware-query.yaml`](../tests/date-aware-query.yaml) checks that a "latest/today" query includes that month-and-year phrase in the first `search_google` call. |
 
 #### Yahoo Search engine
 
@@ -169,6 +178,7 @@ AGENT_MODEL=locooperator-4b@q8_0
 GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
 USER_AGENT=
+INJECT_DATE_CONTEXT=true
 # Single engine: google | bing | brave | duckduckgo | yahoo
 # Rotation examples: bing_2,google_2 | bing,google,bing | bing_2,google,brave_3
 SEARCH_ENGINE=google
@@ -189,6 +199,7 @@ TYPING_WPM=0
 | `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
 | `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
 | `USER_AGENT`             | Custom Chrome user agent passed to SeleniumBase (`Driver(agent=…)`). Empty = browser default. See [below](#browser-and-agent-tuning). |
+| `INJECT_DATE_CONTEXT`    | `true` by default. Fills `{{current_date}}` as **English month name and year** (`May 2026` — avoids `YYYY-MM` hyphens that search engines treat as operators). Calendar day and clock time stay omitted. |
 | `SEARCH_ENGINE`          | Which engine the `search_google` tool uses under the hood. Accepts a single engine (`google`, `bing`, `brave`, `duckduckgo`, `yahoo`) or a rotation list/pattern such as `bing_2,google_2`. See [Search engine rotation](#search-engine-rotation). |
 | `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
 | `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
@@ -212,11 +223,12 @@ Each comma-separated slot is stripped, lower-cased, and consumed once unless it 
 
 ### Browser and agent tuning
 
-These settings matter for **CLI and MCP** runs (not Promptfoo mocks). They are read from `.env` via [`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py), [`agent.py`](../agent.py), and [`tools/_browser_utils.py`](../tools/_browser_utils.py).
+These settings matter for **CLI and MCP** runs. Agent-level settings such as `INJECT_DATE_CONTEXT` and `TOOL_CALL_DELAY` also affect Promptfoo mock runs. They are read from `.env` via [`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py), [`prompts/loader.py`](../prompts/loader.py), [`agent.py`](../agent.py), and [`tools/_browser_utils.py`](../tools/_browser_utils.py).
 
 | Variable | Layer | What it does |
 |----------|--------|----------------|
 | `TOOL_CALL_DELAY` | **Agent** ([`agent.py`](../agent.py)) | After each tool call completes, sleep this many seconds before adding the tool result to the conversation. Use `0` for fastest iteration; raise it if the LM or site rate-limits when many tools run in a row. |
+| `INJECT_DATE_CONTEXT` | **Prompt rendering** ([`prompts/loader.py`](../prompts/loader.py), [`promptfooconfig.yaml`](../promptfooconfig.yaml), [`prompts/websearch-agent.txt`](../prompts/websearch-agent.txt)) | **`true`:** fill `{{current_date}}` with local calendar context as **`Month YYYY`** in English (no numeric hyphen form). **`false`:** leave it blank. |
 | `STEALTH_RECONNECT_TIME` | **Browser / UC** ([`stealth_open()`](../tools/_browser_utils.py)) | **`0`:** load URLs with a normal `get()`. **`> 0`:** use SeleniumBase’s `uc_open_with_reconnect` with that reconnect duration when available. Affects navigations that go through `stealth_open` (including opening the search engine before typing the query). |
 | `TYPING_WPM` | **Search UI** ([`human_type()`](../tools/_browser_utils.py)) | **`0`:** type the whole query at once and submit. **`> 0`:** type at the given words-per-minute (~5 characters per word), with variable burst lengths, pauses between bursts, and rare QWERTY-adjacent mistypes plus backspace. Applied when an engine types into the search field (Google, Bing, Brave, DuckDuckGo, Yahoo, etc.). |
 | `USER_AGENT` | **Browser** ([`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py)) | If non-empty, SeleniumBase starts Chrome with that user-agent string. Leave empty to use the default Chrome UA. |

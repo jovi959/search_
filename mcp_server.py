@@ -22,10 +22,9 @@ from seleniumbase import Driver
 
 from agent import run
 from dispatch import build_dispatch
+from prompts.loader import load
 
 _executor = ThreadPoolExecutor(max_workers=1)
-
-PROMPT_FILE = Path(__file__).resolve().parent / "prompts" / "websearch-agent.txt"
 
 
 @lifespan
@@ -71,8 +70,7 @@ async def web_research(question: str, ctx: Context) -> str:
     )
     model = os.environ.get("AGENT_MODEL", "locooperator-4b@q8_0")
 
-    prompt_template = PROMPT_FILE.read_text(encoding="utf-8")
-    prompt = prompt_template.replace("{{input}}", question)
+    prompt = load("websearch-agent", input=question)
 
     dispatch = build_dispatch(driver)
 
