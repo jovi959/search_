@@ -25,7 +25,8 @@ On failure, return a single error object:
 ```
 
 The user-facing tool is still named `search_google` for compatibility. The
-configured engine is selected by `SEARCH_ENGINE` in `.env`.
+configured engine is selected by `SEARCH_ENGINE` in `.env`; it can be a single
+engine name or a rotation list/pattern such as `bing_2,google_2`.
 
 ## Add an Engine
 
@@ -135,5 +136,5 @@ def _parse_results(driver) -> list[dict]:
 - [brave.py](brave.py): small implementation with card and anchor fallbacks.
 - [duckduckgo.py](duckduckgo.py): stable search box selectors and data-attribute
   result parsing.
-- [yahoo.py](yahoo.py): stable `#uh-sbq` search box selector and Yahoo redirect
-  URL unwrapping.
+- [yahoo.py](yahoo.py): stable `#yschsp` / `#uh-sbq` search box selectors and
+  Yahoo redirect URL unwrapping.

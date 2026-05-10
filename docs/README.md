@@ -1,6 +1,6 @@
 # Web Search Agent
 
-A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI or connect via the MCP server -- the agent searches the configured web engine (`SEARCH_ENGINE` in `.env`: `google`, `bing`, `brave`, `duckduckgo`, or `yahoo`), reads pages, and writes a summarised answer.
+A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI or connect via the MCP server -- the agent searches the configured web engine or rotation (`SEARCH_ENGINE` in `.env`: `google`, `bing`, `brave`, `duckduckgo`, `yahoo`, or a list/pattern), reads pages, and writes a summarised answer.
 
 The project also includes a full [Promptfoo](https://www.promptfoo.dev/) test suite that validates agent behaviour using mock fixtures — no browser needed for tests.
 
@@ -14,11 +14,18 @@ Maintained by hand: commit messages and diffs are the source of truth here; **ne
 
 Summaries below mix `git show` (where a hash is given) with newer work. Within this day, **newest first**.
 
+#### Search engine rotation
+
+| Area | What changed |
+|------|----------------|
+| **Facade** | `SEARCH_ENGINE` now accepts a rotation list (`bing_2,google_2`), an explicit pattern (`bing,google,bing,bing,google`), or a mix (`bing_2,google,brave_3`). |
+| **State** | The cursor lives in-process in [`tools/search.py`](../tools/search.py), survives across MCP requests served by that process, and resets when the process restarts. |
+
 #### Yahoo Search engine
 
 | Area | What changed |
 |------|----------------|
-| **New engine** | [`tools/engines/yahoo.py`](../tools/engines/yahoo.py) — Yahoo Search (`yahoo.com` / `search.yahoo.com`), same `search(driver, query) -> list[dict]` contract as the other engines. Uses stable selectors such as `#uh-sbq`, `input[type='search'][placeholder='Search the web']`, and result heading anchors rather than generated class names. |
+| **New engine** | [`tools/engines/yahoo.py`](../tools/engines/yahoo.py) — Yahoo Search (`search.yahoo.com`), same `search(driver, query) -> list[dict]` contract as the other engines. Uses stable selectors such as `#yschsp`, `input[name='p']`, `#uh-sbq`, and result heading anchors rather than generated class names. |
 | **Facade** | [`tools/search.py`](../tools/search.py) registers `"yahoo": yahoo.search`. Set `SEARCH_ENGINE=yahoo` in `.env`. |
 | **Docs** | [tools/engines/README.md](../tools/engines/README.md) lists Yahoo as a reference implementation. |
 
@@ -162,7 +169,8 @@ AGENT_MODEL=locooperator-4b@q8_0
 GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
 USER_AGENT=
-# google | bing | brave | duckduckgo | yahoo  — keys must match tools/search.py _ENGINES
+# Single engine: google | bing | brave | duckduckgo | yahoo
+# Rotation examples: bing_2,google_2 | bing,google,bing | bing_2,google,brave_3
 SEARCH_ENGINE=google
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
@@ -171,7 +179,7 @@ STEALTH_RECONNECT_TIME=0
 TYPING_WPM=0
 ```
 
-**`SEARCH_ENGINE`** must be one of the keys in [`tools/search.py`](../tools/search.py) (`_ENGINES`): `google`, `bing`, `brave`, `duckduckgo`, `yahoo`. To add another backend, implement `tools/engines/<name>.py` and register it there — see [tools/engines/README.md](../tools/engines/README.md).
+**`SEARCH_ENGINE`** can be one engine name or a rotation schedule. Engine names must be keys in [`tools/search.py`](../tools/search.py) (`_ENGINES`): `google`, `bing`, `brave`, `duckduckgo`, `yahoo`. To add another backend, implement `tools/engines/<name>.py` and register it there — see [tools/engines/README.md](../tools/engines/README.md).
 
 | Variable                 | Purpose                                                                                                                            |
 |--------------------------|------------------------------------------------------------------------------------------------------------------------------------|
@@ -181,12 +189,26 @@ TYPING_WPM=0
 | `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
 | `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
 | `USER_AGENT`             | Custom Chrome user agent passed to SeleniumBase (`Driver(agent=…)`). Empty = browser default. See [below](#browser-and-agent-tuning). |
-| `SEARCH_ENGINE`          | Which engine the `search_google` tool actually uses under the hood. `google` (default), `bing`, `brave`, `duckduckgo`, or `yahoo`. See [tools/engines/README.md](../tools/engines/README.md) to add more. |
+| `SEARCH_ENGINE`          | Which engine the `search_google` tool uses under the hood. Accepts a single engine (`google`, `bing`, `brave`, `duckduckgo`, `yahoo`) or a rotation list/pattern such as `bing_2,google_2`. See [Search engine rotation](#search-engine-rotation). |
 | `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
 | `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
 | `TOOL_CALL_DELAY`        | Seconds to sleep **after each tool runs** (search or page read), before the result is sent back to the LLM. `0` = no pause. See [below](#browser-and-agent-tuning). |
 | `STEALTH_RECONNECT_TIME` | UC-mode navigation: `0` = normal `driver.get()`. `> 0` = `uc_open_with_reconnect` with that many seconds of reconnect-style behaviour for URLs opened via [`stealth_open()`](../tools/_browser_utils.py) (search navigation and any other caller). See [below](#browser-and-agent-tuning). |
 | `TYPING_WPM`             | How the **search box query** is typed: `0` = instant submit. `> 0` = simulated human typing at that WPM (clusters, pauses, occasional typo+correct). Implemented in [`human_type()`](../tools/_browser_utils.py). See [below](#browser-and-agent-tuning). |
+
+### Search engine rotation
+
+`SEARCH_ENGINE` can be a single name, a count list, an explicit pattern, or a mix of those forms:
+
+| `SEARCH_ENGINE` value | Schedule, then repeat |
+|-----------------------|-----------------------|
+| `bing` | `bing` |
+| `bing,google` | `bing`, `google` |
+| `bing_2,google_2` | `bing`, `bing`, `google`, `google` |
+| `bing,google,bing,bing,google` | exactly that order |
+| `bing_2,google,brave_3` | `bing`, `bing`, `google`, `brave`, `brave`, `brave` |
+
+Each comma-separated slot is stripped, lower-cased, and consumed once unless it ends with `_N`, where `N` is a positive integer. The cursor lives only in memory inside [`tools/search.py`](../tools/search.py), is shared across all MCP requests in one process, and resets to the first slot when the process restarts.
 
 ### Browser and agent tuning
 
@@ -210,7 +232,7 @@ python main.py "Who is the current PM of Jamaica?"
 ```
 
 The agent will:
-1. Search using the configured engine (`SEARCH_ENGINE`: `google`, `bing`, `brave`, `duckduckgo`, or `yahoo`; default `google`)
+1. Search using the configured engine or rotation (`SEARCH_ENGINE`: `google`, `bing`, `brave`, `duckduckgo`, `yahoo`, or a list/pattern; default `google`)
 2. Read the best result pages
 3. Summarise the findings into a clear answer
 4. Print the answer, sources, and tool call steps

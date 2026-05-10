@@ -9,6 +9,9 @@ from tools._browser_utils import human_type, stealth_open
 _RESULT_WAIT = 4
 _POLL = 0.1
 _INPUT_SELECTORS = (
+    "#yschsp",
+    "input[name='p'][placeholder='Search the web']",
+    "input[name='p']",
     "#uh-sbq",
     "input[type='search'][placeholder='Search the web']",
     "input[type='search']",
