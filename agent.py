@@ -7,7 +7,9 @@ tool calls. Reusable in both testing (mock dispatch) and production
 """
 
 import json
+import os
 import re
+import time
 
 from openai import OpenAI
 from tools.registry import get_openai_tools
@@ -28,6 +30,7 @@ def run(prompt: str, client: OpenAI, model: str, dispatch) -> dict:
     tools = get_openai_tools()
     messages = [{"role": "user", "content": prompt}]
     all_steps = []
+    delay = float(os.environ.get("TOOL_CALL_DELAY", "0"))
 
     for _ in range(MAX_TOOL_ROUNDS):
         response = client.chat.completions.create(
@@ -49,6 +52,8 @@ def run(prompt: str, client: OpenAI, model: str, dispatch) -> dict:
                 all_steps.append({"tool": fn_name, "input": fn_args})
 
                 result = dispatch(fn_name, fn_args)
+                if delay > 0:
+                    time.sleep(delay)
                 content = _wrap_tool_result(fn_name, result)
 
                 messages.append(
