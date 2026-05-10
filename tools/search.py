@@ -2,11 +2,12 @@
 
 import os
 
-from tools.engines import bing, google
+from tools.engines import bing, brave, google
 
 _ENGINES = {
     "google": google.search,
     "bing": bing.search,
+    "brave": brave.search,
 }
 
 

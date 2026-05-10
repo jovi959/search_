@@ -4,6 +4,83 @@ A local web research agent powered by an LLM (via LM Studio) and SeleniumBase fo
 
 The project also includes a full [Promptfoo](https://www.promptfoo.dev/) test suite that validates agent behaviour using mock fixtures — no browser needed for tests.
 
+Optional **browser and agent tuning** (`USER_AGENT`, `STEALTH_RECONNECT_TIME`, `TYPING_WPM`, `TOOL_CALL_DELAY`) is documented under [Configuration](#configuration)—see [Browser and agent tuning](#browser-and-agent-tuning).
+
+## Changelog
+
+Maintained by hand: commit messages and diffs are the source of truth here; **newest first** within each day.
+
+### 2026-05-10
+
+Summaries below are from `git show` on local `main`. Within this day, commits are listed **newest first** (see timestamps in `git log` if you need order).
+
+#### `5acb12f` — add bing
+
+| Area | What changed |
+|------|----------------|
+| **Bing (`tools/engines/bing.py`)** | Search box handling: `wait_for_element_present` on `#sb_form_q`, `textarea[name='q']`, `input[name='q']` (short timeout), then `human_type`; falls back to `https://www.bing.com/search?q=…` only if no box appears. |
+| **Agent ([`agent.py`](../agent.py))** | Tracks successful vs failed `get_page_content` results. If **every** page read failed or returned empty text, the user-facing answer is replaced with a short notice that sources could not be read reliably (includes URLs when known). |
+| **Round cap** | When the loop hits `MAX_TOOL_ROUNDS`, the code runs **one more** `chat.completions` call with a user message that forces a final answer from prior context—no further tool calls. |
+| **Prompt ([`prompts/websearch-agent.txt`](../prompts/websearch-agent.txt))** | Instructs the model to read **at least two** result pages when multiple sources could disagree. |
+| **Tests** | New [`tests/round-cap-summary.yaml`](../tests/round-cap-summary.yaml) (search + four page reads uses the full round budget; asserts no raw `<page_content>` and a real summary). Listed in [`promptfooconfig.yaml`](../promptfooconfig.yaml). |
+
+#### `0041274` — refactor to support multiple engines
+
+| Area | What changed |
+|------|----------------|
+| **Split search** | Removed monolithic `tools/search_google.py` (no longer in tree). Shared stealth/typing → [`tools/_browser_utils.py`](../tools/_browser_utils.py). Google → [`tools/engines/google.py`](../tools/engines/google.py). Bing → [`tools/engines/bing.py`](../tools/engines/bing.py). |
+| **Facade** | New [`tools/search.py`](../tools/search.py): reads `SEARCH_ENGINE`, dispatches to `google.search` or `bing.search`. Tool **name** stays `search_google` everywhere. |
+| **Dispatch** | [`dispatch.py`](../dispatch.py) imports `from tools.search import search` and wires `"search_google": … search(driver, query)`. |
+| **Config** | `SEARCH_ENGINE=google` \| `bing` in [`.env`](../.env). Comments for `STEALTH_RECONNECT_TIME` and `TYPING_WPM` refer to the generic “search box,” not Google only. |
+| **Docs** | [`docs/README.md`](README.md) and [`docs/TOOL_GUIDE.md`](TOOL_GUIDE.md) updated for `SEARCH_ENGINE`. |
+
+#### `ca558c6` — user agent + human typing (search box)
+
+| Area | What changed |
+|------|----------------|
+| **`USER_AGENT`** | Optional Chrome user agent: [`main.py`](../main.py) and [`mcp_server.py`](../mcp_server.py) pass `agent=` into SeleniumBase `Driver` when set; empty = browser default (see the [Configuration](#configuration) table). |
+| **`TYPING_WPM`** | Lived in search code first; now implemented as [`human_type()`](../tools/_browser_utils.py) in [`tools/_browser_utils.py`](../tools/_browser_utils.py). **`0`** = instant `type()` + submit. **`> 0`** = target typing speed (words/min, ~5 chars/word): character-by-character delays, **speed clusters** (bursts of 3–7 chars with per-cluster speed jitter up to 50% faster than base), **longer pauses between clusters**, and ~**5%** adjacent-key **typos** on letters + backspace correction (QWERTY neighbors). All engines that call `human_type` share this behaviour. |
+| **Docs** | `USER_AGENT` / `TYPING_WPM` documented in this README’s `.env` example and table. |
+
+#### `4e2ca91` — stealth reconnect
+
+| Area | What changed |
+|------|----------------|
+| **`STEALTH_RECONNECT_TIME`** | Seconds to keep CDP “reconnect” mode during navigations when using UC stealth open. **`0`** = plain `driver.get()`. **`> 0`** = `uc_open_with_reconnect(..., reconnect_time=…)` when available (see [`stealth_open()`](../tools/_browser_utils.py)). Used for search **and** other code paths that call `stealth_open`. |
+
+#### `e9d9579` — pause between tool calls
+
+| Area | What changed |
+|------|----------------|
+| **`TOOL_CALL_DELAY`** | Seconds to sleep in [`agent.py`](../agent.py) after each tool dispatch before wrapping the result for the model (`0` = no pause). |
+
+#### This doc + follow-ups (working tree)
+
+| Item | Status |
+|------|--------|
+| **Changelog** | This section (edits in `docs/README.md` may be uncommitted). |
+| **Brave engine** | [`tools/engines/brave.py`](../tools/engines/brave.py) + [`tools/engines/README.md`](../tools/engines/README.md) added locally, and [`tools/search.py`](../tools/search.py) registers `"brave": brave.search`. Use `SEARCH_ENGINE=brave` to select it. |
+
+### 2026-03-30
+
+| Commit | What changed |
+|--------|----------------|
+| **`fc17c1a` — blocklist** | [`blocklist.json`](../blocklist.json) + [`tools/blocklist.py`](../tools/blocklist.py): hostname / URL patterns; [`get_page_content`](../tools/get_page_content.py) returns an error without visiting blocked URLs. Details in [`BLOCKLIST.md`](BLOCKLIST.md). |
+| **`f639994` — eager loads** | SeleniumBase `Driver` uses `page_load_strategy: "eager"` ([`mcp_server.py`](../mcp_server.py), [`main.py`](../main.py)) so navigation returns before every subresource finishes. This commit added it on the MCP server path. |
+
+### 2026-03-05
+
+| Commit | What changed |
+|--------|----------------|
+| **`5f7befe` — MCP + dispatch** | Streamable HTTP MCP server and shared [`dispatch.py`](../dispatch.py) wiring for CLI and server (baseline for the architecture described in this doc). |
+
+### Earlier
+
+| Area | What |
+|------|------|
+| Tests | Promptfoo (`npm test`), mock fixtures, no live browser |
+| CLI | [`main.py`](../main.py) — one-shot questions |
+
 ## Project Structure
 
 ```
@@ -20,7 +97,7 @@ web_search_mcp/
 │   ├── search_google.json        # Tool definition (OpenAI function-calling format)
 │   ├── search.py                 # Configurable search facade
 │   ├── _browser_utils.py         # Shared browser/typing helpers
-│   ├── engines/                  # Google and Bing search implementations
+│   ├── engines/                  # Per-engine search implementations (google, bing, brave)
 │   ├── get_page_content.json     # Tool definition
 │   ├── get_page_content.py       # Real page fetcher via SeleniumBase
 │   └── registry.py               # Loads all *.json tool defs for Python
@@ -83,13 +160,24 @@ TYPING_WPM=0
 | `AGENT_MODEL`            | Model the agent uses for reasoning/tool calls                                                                                      |
 | `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
 | `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
-| `USER_AGENT`             | Custom Chrome user agent string. Empty (default) = Chrome default UA                                                               |
-| `SEARCH_ENGINE`          | Which engine the `search_google` tool actually uses under the hood. `google` (default) or `bing`.                                  |
+| `USER_AGENT`             | Custom Chrome user agent passed to SeleniumBase (`Driver(agent=…)`). Empty = browser default. See [below](#browser-and-agent-tuning). |
+| `SEARCH_ENGINE`          | Which engine the `search_google` tool actually uses under the hood. `google` (default), `bing`, or `brave`. See [tools/engines/README.md](../tools/engines/README.md) to add more. |
 | `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
 | `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
-| `TOOL_CALL_DELAY`        | Seconds to sleep between tool calls (`0` = no delay)                                                                               |
-| `STEALTH_RECONNECT_TIME` | Seconds CDP stays detached during search navigation. `0` = plain `get()`, any value `> 0` enables `uc_open_with_reconnect` for searches |
-| `TYPING_WPM`             | Words-per-minute when typing the search query. `0` = instant (default). `> 0` types char-by-char at that speed (assumes ~5 chars/word) |
+| `TOOL_CALL_DELAY`        | Seconds to sleep **after each tool runs** (search or page read), before the result is sent back to the LLM. `0` = no pause. See [below](#browser-and-agent-tuning). |
+| `STEALTH_RECONNECT_TIME` | UC-mode navigation: `0` = normal `driver.get()`. `> 0` = `uc_open_with_reconnect` with that many seconds of reconnect-style behaviour for URLs opened via [`stealth_open()`](../tools/_browser_utils.py) (search navigation and any other caller). See [below](#browser-and-agent-tuning). |
+| `TYPING_WPM`             | How the **search box query** is typed: `0` = instant submit. `> 0` = simulated human typing at that WPM (clusters, pauses, occasional typo+correct). Implemented in [`human_type()`](../tools/_browser_utils.py). See [below](#browser-and-agent-tuning). |
+
+### Browser and agent tuning
+
+These settings matter for **CLI and MCP** runs (not Promptfoo mocks). They are read from `.env` via [`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py), [`agent.py`](../agent.py), and [`tools/_browser_utils.py`](../tools/_browser_utils.py).
+
+| Variable | Layer | What it does |
+|----------|--------|----------------|
+| `TOOL_CALL_DELAY` | **Agent** ([`agent.py`](../agent.py)) | After each tool call completes, sleep this many seconds before adding the tool result to the conversation. Use `0` for fastest iteration; raise it if the LM or site rate-limits when many tools run in a row. |
+| `STEALTH_RECONNECT_TIME` | **Browser / UC** ([`stealth_open()`](../tools/_browser_utils.py)) | **`0`:** load URLs with a normal `get()`. **`> 0`:** use SeleniumBase’s `uc_open_with_reconnect` with that reconnect duration when available. Affects navigations that go through `stealth_open` (including opening the search engine before typing the query). |
+| `TYPING_WPM` | **Search UI** ([`human_type()`](../tools/_browser_utils.py)) | **`0`:** type the whole query at once and submit. **`> 0`:** type at the given words-per-minute (~5 characters per word), with variable burst lengths, pauses between bursts, and rare QWERTY-adjacent mistypes plus backspace. Applied when an engine types into the search field (Google, Bing, etc.). |
+| `USER_AGENT` | **Browser** ([`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py)) | If non-empty, SeleniumBase starts Chrome with that user-agent string. Leave empty to use the default Chrome UA. |
 
 ## Usage
 
@@ -196,7 +284,7 @@ npm run view
 
 ## How It Works
 
-**Agent Loop** -- `agent.py` sends the prompt + tool definitions to the LLM. When the LLM makes a tool call, the agent dispatches it and feeds the result back. This repeats up to 5 rounds until the LLM produces a final text answer. The agent takes a generic `dispatch` callable -- it doesn't know whether tools are real or mocked.
+**Agent Loop** -- `agent.py` sends the prompt + tool definitions to the LLM. When the LLM makes a tool call, the agent dispatches it and feeds the result back. After each tool returns, an optional **`TOOL_CALL_DELAY`** sleep runs before the result is wrapped for the model. This repeats up to 5 rounds until the LLM produces a final text answer. The agent takes a generic `dispatch` callable -- it doesn't know whether tools are real or mocked.
 
 **MCP Server** -- `mcp_server.py` runs a FastMCP server that exposes a single `web_research` tool over Streamable HTTP. On startup it launches a Chrome browser via SeleniumBase UC mode. Each tool call runs the full agent loop internally and returns the researched answer.
 
