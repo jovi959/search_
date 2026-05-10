@@ -1,7 +1,9 @@
 """Bing search engine implementation."""
 
+import base64
+import binascii
 import time
-from urllib.parse import quote_plus
+from urllib.parse import parse_qs, quote_plus, unquote, urlparse
 
 from tools._browser_utils import human_type, stealth_open
 
@@ -59,11 +61,11 @@ def _parse_results(driver) -> list[dict]:
         for card in cards[:5]:
             try:
                 a_tag = card.find_element("css selector", "h2 > a")
-                link = a_tag.get_attribute("href") or ""
+                link = _clean_link(a_tag.get_attribute("href") or "")
                 title = a_tag.text.strip()
                 snippet = _get_snippet(card)
 
-                if title and link:
+                if title and link and "bing.com" not in urlparse(link).netloc.lower():
                     results.append({"title": title, "link": link, "snippet": snippet})
             except Exception:
                 continue
@@ -79,3 +81,29 @@ def _get_snippet(card) -> str:
         return el.text.strip()
     except Exception:
         return ""
+
+
+def _clean_link(link: str) -> str:
+    """Unwrap Bing's bing.com/ck/a?...&u=a1<base64url> redirector to the real URL."""
+    if not link:
+        return ""
+    parsed = urlparse(link)
+    host = parsed.netloc.lower()
+    if not host.endswith("bing.com") or not parsed.path.startswith("/ck/"):
+        return link
+    raw = parse_qs(parsed.query).get("u", [""])[0]
+    if not raw:
+        return link
+    payload = raw[2:] if len(raw) > 2 and raw[0].lower() == "a" and raw[1].isdigit() else raw
+    payload += "=" * (-len(payload) % 4)
+    try:
+        decoded = base64.urlsafe_b64decode(payload).decode("utf-8", "replace")
+    except (binascii.Error, ValueError):
+        return link
+    decoded = decoded.strip()
+    if decoded.lower().startswith(("http://", "https://")):
+        return decoded
+    try:
+        return unquote(decoded) or link
+    except Exception:
+        return link
