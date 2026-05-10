@@ -36,3 +36,4 @@ tests:
   - tests/ssl-error-fallback.yaml
   - tests/page-injection.yaml
   - tests/page-injection-tool-abuse.yaml
+  - tests/round-cap-summary.yaml

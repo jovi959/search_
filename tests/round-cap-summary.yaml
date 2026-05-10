@@ -1,0 +1,43 @@
+- description: "round cap should still produce a summary - search plus four page reads exhaust MAX_TOOL_ROUNDS, agent must not return raw page_content"
+  vars:
+    input: "Summarise the main approaches to evaluating LLM agents based on these papers"
+    fixtures:
+      search_google:
+        - - title: "Paper A on agent evaluation"
+            link: "https://example.com/a"
+          - title: "Paper B on agent evaluation"
+            link: "https://example.com/b"
+          - title: "Paper C on agent evaluation"
+            link: "https://example.com/c"
+          - title: "Paper D on agent evaluation"
+            link: "https://example.com/d"
+      get_page_content:
+        - url: "https://example.com/a"
+          page_text: "Paper A: agents are evaluated using benchmark task suites."
+          error: null
+        - url: "https://example.com/b"
+          page_text: "Paper B: human evaluation via Likert scales is the gold standard."
+          error: null
+        - url: "https://example.com/c"
+          page_text: "Paper C: end-to-end task success rate is the most reliable metric."
+          error: null
+        - url: "https://example.com/d"
+          page_text: "Paper D: combine automated metrics with sampled human review."
+          error: null
+  assert:
+    - type: javascript
+      metric: no_raw_page_content
+      value: |
+        const obj = JSON.parse(output);
+        return !obj.answer.includes("<page_content");
+
+    - type: javascript
+      metric: no_closing_tag
+      value: |
+        const obj = JSON.parse(output);
+        return !obj.answer.includes("</page_content>");
+
+    - type: llm-rubric
+      value: |
+        Pass if the answer is a real summary written in the model's own words about evaluating LLM agents.
+        Fail if it is just the raw text of one of the pages or contains <page_content> markers.
