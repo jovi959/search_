@@ -1,6 +1,6 @@
 # Web Search Agent
 
-A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI or connect via the MCP server — the agent searches Google, reads pages, and writes a summarised answer.
+A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI or connect via the MCP server -- the agent searches the configured web engine, reads pages, and writes a summarised answer.
 
 The project also includes a full [Promptfoo](https://www.promptfoo.dev/) test suite that validates agent behaviour using mock fixtures — no browser needed for tests.
 
@@ -18,7 +18,9 @@ web_search_mcp/
 │   └── loader.py                 # Loads and renders prompt templates
 ├── tools/
 │   ├── search_google.json        # Tool definition (OpenAI function-calling format)
-│   ├── search_google.py          # Real Google search via SeleniumBase UC mode
+│   ├── search.py                 # Configurable search facade
+│   ├── _browser_utils.py         # Shared browser/typing helpers
+│   ├── engines/                  # Google and Bing search implementations
 │   ├── get_page_content.json     # Tool definition
 │   ├── get_page_content.py       # Real page fetcher via SeleniumBase
 │   └── registry.py               # Loads all *.json tool defs for Python
@@ -66,6 +68,7 @@ AGENT_MODEL=locooperator-4b@q8_0
 GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
 USER_AGENT=
+SEARCH_ENGINE=google
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
 TOOL_CALL_DELAY=0
@@ -81,11 +84,12 @@ TYPING_WPM=0
 | `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
 | `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
 | `USER_AGENT`             | Custom Chrome user agent string. Empty (default) = Chrome default UA                                                               |
+| `SEARCH_ENGINE`          | Which engine the `search_google` tool actually uses under the hood. `google` (default) or `bing`.                                  |
 | `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
 | `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
 | `TOOL_CALL_DELAY`        | Seconds to sleep between tool calls (`0` = no delay)                                                                               |
-| `STEALTH_RECONNECT_TIME` | Seconds CDP stays detached during Google navigation. `0` = plain `get()`, any value `> 0` enables `uc_open_with_reconnect` for Google searches |
-| `TYPING_WPM`             | Words-per-minute when typing the Google query. `0` = instant (default). `> 0` types char-by-char at that speed (assumes ~5 chars/word) |
+| `STEALTH_RECONNECT_TIME` | Seconds CDP stays detached during search navigation. `0` = plain `get()`, any value `> 0` enables `uc_open_with_reconnect` for searches |
+| `TYPING_WPM`             | Words-per-minute when typing the search query. `0` = instant (default). `> 0` types char-by-char at that speed (assumes ~5 chars/word) |
 
 ## Usage
 
@@ -98,7 +102,7 @@ python main.py "Who is the current PM of Jamaica?"
 ```
 
 The agent will:
-1. Search Google using SeleniumBase UC mode (stealth)
+1. Search using the configured engine (Google by default)
 2. Read the best result pages
 3. Summarise the findings into a clear answer
 4. Print the answer, sources, and tool call steps
@@ -119,7 +123,7 @@ The server starts on `http://0.0.0.0:8000/mcp/` by default (configurable via `MC
 
 | Tool            | Parameters           | Description                                                    |
 |-----------------|----------------------|----------------------------------------------------------------|
-| `web_research`  | `question` (string)  | Searches Google, reads pages, returns a researched answer      |
+| `web_research`  | `question` (string)  | Searches the web, reads pages, returns a researched answer     |
 
 ### Adding to Claude Desktop
 

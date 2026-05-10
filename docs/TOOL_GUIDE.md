@@ -6,7 +6,7 @@ How to add and configure tools for the web search agent.
 
 Each tool is defined by a JSON file in `tools/` using the OpenAI function-calling format (e.g. `tools/search_google.json`). The `tools/registry.py` module loads all `*.json` files at import time and exposes them to the agent.
 
-For real execution, each tool also has a Python implementation file (e.g. `tools/search_google.py`) that accepts a SeleniumBase driver and returns structured results.
+For real execution, each tool also has a Python implementation path that accepts a SeleniumBase driver and returns structured results. The user-facing `search_google` tool is implemented by `tools/search.py`, which routes to a configured engine.
 
 The agent loop in `agent.py` doesn't know or care whether tools are real or mocked — it receives a `dispatch` callable and uses it for every tool call.
 
@@ -14,7 +14,7 @@ The agent loop in `agent.py` doesn't know or care whether tools are real or mock
 
 | Tool               | Definition                    | Implementation                | Purpose                     |
 |--------------------|-------------------------------|-------------------------------|-----------------------------|
-| `search_google`    | `tools/search_google.json`    | `tools/search_google.py`      | Google search via UC mode   |
+| `search_google`    | `tools/search_google.json`    | `tools/search.py`             | Configurable web search     |
 | `get_page_content` | `tools/get_page_content.json` | `tools/get_page_content.py`   | Fetch and clean page text   |
 
 ## Step-by-Step: Adding a New Tool
@@ -56,7 +56,7 @@ def your_tool_name(driver, param_name: str) -> dict:
     return {"result_field": "value"}
 ```
 
-Then register it in `main.py`'s `build_dispatch`:
+Then register it in `dispatch.py`'s `build_dispatch`:
 
 ```python
 tool_map = {
@@ -164,7 +164,7 @@ Loads all `*.json` files at import time and exposes:
 
 ### `tools/*.py` (real implementations)
 
-Each tool's Python file exports a function that takes a SeleniumBase driver as the first argument. `main.py` wires these into the dispatch closure.
+Each tool's Python implementation path exports a function that takes a SeleniumBase driver as the first argument. `dispatch.py` wires these into the dispatch closure.
 
 ### Mock dispatch (testing)
 

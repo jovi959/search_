@@ -5,14 +5,14 @@ Used by both main.py (CLI) and mcp.py (MCP server) to wire
 real SeleniumBase tools into the agent loop.
 """
 
-from tools.search_google import search_google
+from tools.search import search
 from tools.get_page_content import get_page_content
 
 
 def build_dispatch(driver):
     """Return a dispatch(tool_name, args) closure backed by real browser tools."""
     tool_map = {
-        "search_google": lambda args: search_google(driver, args["query"]),
+        "search_google": lambda args: search(driver, args["query"]),
         "get_page_content": lambda args: get_page_content(driver, args["url"]),
     }
 
