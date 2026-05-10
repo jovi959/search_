@@ -120,10 +120,11 @@ def _parse_results(driver) -> list[dict]:
 
 - Do not assume every search box is an `input`. Bing uses a `textarea`.
 - Prefer stable selectors such as ids, names, ARIA labels, and `data-*`
-  attributes. Avoid generated class names like DuckDuckGo's search box classes.
+  attributes. Avoid generated class names like DuckDuckGo's or Yahoo's search
+  box classes.
 - Do not check for the search box immediately after navigation without waiting.
 - Filter engine-owned links such as `google.com`, `bing.com`,
-  `search.brave.com`, or `duckduckgo.com`.
+  `search.brave.com`, `duckduckgo.com`, or `search.yahoo.com`.
 - Return structured result dictionaries, not raw Selenium elements or page text.
 
 ## Reference Implementations
@@ -134,3 +135,5 @@ def _parse_results(driver) -> list[dict]:
 - [brave.py](brave.py): small implementation with card and anchor fallbacks.
 - [duckduckgo.py](duckduckgo.py): stable search box selectors and data-attribute
   result parsing.
+- [yahoo.py](yahoo.py): stable `#uh-sbq` search box selector and Yahoo redirect
+  URL unwrapping.

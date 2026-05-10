@@ -1,6 +1,6 @@
 # Web Search Agent
 
-A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI or connect via the MCP server -- the agent searches the configured web engine, reads pages, and writes a summarised answer.
+A local web research agent powered by an LLM (via LM Studio) and SeleniumBase for real browser automation. Ask a question from the CLI or connect via the MCP server -- the agent searches the configured web engine (`SEARCH_ENGINE` in `.env`: `google`, `bing`, `brave`, `duckduckgo`, or `yahoo`), reads pages, and writes a summarised answer.
 
 The project also includes a full [Promptfoo](https://www.promptfoo.dev/) test suite that validates agent behaviour using mock fixtures — no browser needed for tests.
 
@@ -13,6 +13,14 @@ Maintained by hand: commit messages and diffs are the source of truth here; **ne
 ### 2026-05-10
 
 Summaries below mix `git show` (where a hash is given) with newer work. Within this day, **newest first**.
+
+#### Yahoo Search engine
+
+| Area | What changed |
+|------|----------------|
+| **New engine** | [`tools/engines/yahoo.py`](../tools/engines/yahoo.py) — Yahoo Search (`yahoo.com` / `search.yahoo.com`), same `search(driver, query) -> list[dict]` contract as the other engines. Uses stable selectors such as `#uh-sbq`, `input[type='search'][placeholder='Search the web']`, and result heading anchors rather than generated class names. |
+| **Facade** | [`tools/search.py`](../tools/search.py) registers `"yahoo": yahoo.search`. Set `SEARCH_ENGINE=yahoo` in `.env`. |
+| **Docs** | [tools/engines/README.md](../tools/engines/README.md) lists Yahoo as a reference implementation. |
 
 #### DuckDuckGo Search engine
 
@@ -27,7 +35,7 @@ Summaries below mix `git show` (where a hash is given) with newer work. Within t
 | Area | What changed |
 |------|----------------|
 | **New engine** | [`tools/engines/brave.py`](../tools/engines/brave.py) — Brave Search (`search.brave.com`), same `search(driver, query) -> list[dict]` contract as Google and Bing; uses [`stealth_open()`](../tools/_browser_utils.py) and [`human_type()`](../tools/_browser_utils.py). Filters internal Brave links out of organic results. |
-| **Facade** | [`tools/search.py`](../tools/search.py) registers `"brave": brave.search` alongside `google` and `bing`. Set `SEARCH_ENGINE=brave` in `.env`. |
+| **Facade** | [`tools/search.py`](../tools/search.py) registers `"brave": brave.search`. Set `SEARCH_ENGINE=brave` in `.env`. |
 | **Docs** | [tools/engines/README.md](../tools/engines/README.md) documents the engine contract and lists Brave as a reference implementation. |
 
 #### `5acb12f` — add bing
@@ -45,9 +53,9 @@ Summaries below mix `git show` (where a hash is given) with newer work. Within t
 | Area | What changed |
 |------|----------------|
 | **Split search** | Removed monolithic `tools/search_google.py` (no longer in tree). Shared stealth/typing → [`tools/_browser_utils.py`](../tools/_browser_utils.py). Google → [`tools/engines/google.py`](../tools/engines/google.py). Bing → [`tools/engines/bing.py`](../tools/engines/bing.py). |
-| **Facade** | New [`tools/search.py`](../tools/search.py): reads `SEARCH_ENGINE`, dispatches to `google.search` or `bing.search`. (Brave and DuckDuckGo were added later—see newer sections above.) Tool **name** stays `search_google` everywhere. |
+| **Facade** | New [`tools/search.py`](../tools/search.py): reads `SEARCH_ENGINE`, dispatches to `google.search` or `bing.search`. (Brave, DuckDuckGo, and Yahoo were added later—see newer sections above.) Tool **name** stays `search_google` everywhere. |
 | **Dispatch** | [`dispatch.py`](../dispatch.py) imports `from tools.search import search` and wires `"search_google": … search(driver, query)`. |
-| **Config** | At this commit: `SEARCH_ENGINE=google` \| `bing`. Later extended with `brave` and `duckduckgo` (see newer sections above). Comments for `STEALTH_RECONNECT_TIME` and `TYPING_WPM` refer to the generic “search box,” not Google only. |
+| **Config** | At this commit: `SEARCH_ENGINE=google` \| `bing`. Later extended with `brave`, `duckduckgo`, and `yahoo` (see newer sections above). Comments for `STEALTH_RECONNECT_TIME` and `TYPING_WPM` refer to the generic “search box,” not Google only. |
 | **Docs** | [`docs/README.md`](README.md) and [`docs/TOOL_GUIDE.md`](TOOL_GUIDE.md) updated for `SEARCH_ENGINE`. |
 
 #### `ca558c6` — user agent + human typing (search box)
@@ -106,7 +114,7 @@ web_search_mcp/
 │   ├── search_google.json        # Tool definition (OpenAI function-calling format)
 │   ├── search.py                 # Configurable search facade
 │   ├── _browser_utils.py         # Shared browser/typing helpers
-│   ├── engines/                  # Per-engine search implementations
+│   ├── engines/                  # google.py, bing.py, brave.py, duckduckgo.py, yahoo.py
 │   ├── get_page_content.json     # Tool definition
 │   ├── get_page_content.py       # Real page fetcher via SeleniumBase
 │   └── registry.py               # Loads all *.json tool defs for Python
@@ -154,7 +162,7 @@ AGENT_MODEL=locooperator-4b@q8_0
 GRADER_MODEL=gemma-3-4b-it
 HEADLESS=true
 USER_AGENT=
-# google | bing | brave | duckduckgo
+# google | bing | brave | duckduckgo | yahoo  — keys must match tools/search.py _ENGINES
 SEARCH_ENGINE=google
 MCP_HOST=0.0.0.0
 MCP_PORT=8000
@@ -162,6 +170,8 @@ TOOL_CALL_DELAY=0
 STEALTH_RECONNECT_TIME=0
 TYPING_WPM=0
 ```
+
+**`SEARCH_ENGINE`** must be one of the keys in [`tools/search.py`](../tools/search.py) (`_ENGINES`): `google`, `bing`, `brave`, `duckduckgo`, `yahoo`. To add another backend, implement `tools/engines/<name>.py` and register it there — see [tools/engines/README.md](../tools/engines/README.md).
 
 | Variable                 | Purpose                                                                                                                            |
 |--------------------------|------------------------------------------------------------------------------------------------------------------------------------|
@@ -171,7 +181,7 @@ TYPING_WPM=0
 | `GRADER_MODEL`           | Model Promptfoo uses to grade LLM rubrics                                                                                          |
 | `HEADLESS`               | `true` = no browser window, `false` = visible                                                                                      |
 | `USER_AGENT`             | Custom Chrome user agent passed to SeleniumBase (`Driver(agent=…)`). Empty = browser default. See [below](#browser-and-agent-tuning). |
-| `SEARCH_ENGINE`          | Which engine the `search_google` tool actually uses under the hood. `google` (default), `bing`, `brave`, or `duckduckgo`. See [tools/engines/README.md](../tools/engines/README.md) to add more. |
+| `SEARCH_ENGINE`          | Which engine the `search_google` tool actually uses under the hood. `google` (default), `bing`, `brave`, `duckduckgo`, or `yahoo`. See [tools/engines/README.md](../tools/engines/README.md) to add more. |
 | `MCP_HOST`               | MCP server bind address (default `0.0.0.0`)                                                                                        |
 | `MCP_PORT`               | MCP server port (default `8000`)                                                                                                   |
 | `TOOL_CALL_DELAY`        | Seconds to sleep **after each tool runs** (search or page read), before the result is sent back to the LLM. `0` = no pause. See [below](#browser-and-agent-tuning). |
@@ -186,7 +196,7 @@ These settings matter for **CLI and MCP** runs (not Promptfoo mocks). They are r
 |----------|--------|----------------|
 | `TOOL_CALL_DELAY` | **Agent** ([`agent.py`](../agent.py)) | After each tool call completes, sleep this many seconds before adding the tool result to the conversation. Use `0` for fastest iteration; raise it if the LM or site rate-limits when many tools run in a row. |
 | `STEALTH_RECONNECT_TIME` | **Browser / UC** ([`stealth_open()`](../tools/_browser_utils.py)) | **`0`:** load URLs with a normal `get()`. **`> 0`:** use SeleniumBase’s `uc_open_with_reconnect` with that reconnect duration when available. Affects navigations that go through `stealth_open` (including opening the search engine before typing the query). |
-| `TYPING_WPM` | **Search UI** ([`human_type()`](../tools/_browser_utils.py)) | **`0`:** type the whole query at once and submit. **`> 0`:** type at the given words-per-minute (~5 characters per word), with variable burst lengths, pauses between bursts, and rare QWERTY-adjacent mistypes plus backspace. Applied when an engine types into the search field (Google, Bing, Brave, DuckDuckGo, etc.). |
+| `TYPING_WPM` | **Search UI** ([`human_type()`](../tools/_browser_utils.py)) | **`0`:** type the whole query at once and submit. **`> 0`:** type at the given words-per-minute (~5 characters per word), with variable burst lengths, pauses between bursts, and rare QWERTY-adjacent mistypes plus backspace. Applied when an engine types into the search field (Google, Bing, Brave, DuckDuckGo, Yahoo, etc.). |
 | `USER_AGENT` | **Browser** ([`main.py`](../main.py), [`mcp_server.py`](../mcp_server.py)) | If non-empty, SeleniumBase starts Chrome with that user-agent string. Leave empty to use the default Chrome UA. |
 
 ## Usage
@@ -200,7 +210,7 @@ python main.py "Who is the current PM of Jamaica?"
 ```
 
 The agent will:
-1. Search using the configured engine (`SEARCH_ENGINE`: `google`, `bing`, `brave`, or `duckduckgo`; default `google`)
+1. Search using the configured engine (`SEARCH_ENGINE`: `google`, `bing`, `brave`, `duckduckgo`, or `yahoo`; default `google`)
 2. Read the best result pages
 3. Summarise the findings into a clear answer
 4. Print the answer, sources, and tool call steps
@@ -221,7 +231,7 @@ The server starts on `http://0.0.0.0:8000/mcp/` by default (configurable via `MC
 
 | Tool            | Parameters           | Description                                                    |
 |-----------------|----------------------|----------------------------------------------------------------|
-| `web_research`  | `question` (string)  | Searches the web, reads pages, returns a researched answer     |
+| `web_research`  | `question` (string)  | Runs the agent with real browser tools; search backend is `SEARCH_ENGINE` from `.env` (see [Configuration](#configuration)). |
 
 ### Adding to Claude Desktop
 
